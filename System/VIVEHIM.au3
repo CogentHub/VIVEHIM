@@ -152,6 +152,8 @@ Global $VIVEHOME_Shortcut_File_source_bak = "C:\Users\cogent\AppData\Roaming\HTC
 
 Global $gfx = @ScriptDir & "\" & "gfx\"
 Global $Icons = $Install_DIR & "Icons\"
+Global $Icons_Favorites_Folder = $Install_DIR & "Icons\Favorites\"
+If Not FileExists($Icons_Favorites_Folder) Then DirCreate($Icons_Favorites_Folder)
 Global $Icons_DIR_1 = $Install_Folder_VIVE_Software & "Updater\App\Dashboard\win32\header_image\"
 Global $Icons_DIR_2 = $Icons
 Global $Icons_DIR_3 = IniRead($Config_INI, "Folders", "Custom_Icon_Folder_1", "")
