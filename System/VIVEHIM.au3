@@ -133,6 +133,7 @@ Global $PO_right_now, $PO_24h_peak, $PO_all_time, $ListView_Item_Name, $ListView
 Global $Input_Install_Folder, $Button_Install_Folder, $Input_Install_Folder_VIVE_Software, $Button_Install_Folder_VIVE_Software
 Global $Input_Install_Folder_VIVE_HOME, $Button_Install_Folder_VIVE_HOME, $Input_VIVE_HOME, $Button_VIVE_HOME, $Input_VIVE_HOME_VRAPP, $Button_VIVE_HOME_VRAPP
 Global $FileSelectFolder, $Value_Input, $Check_Value_Input, $Label_Settings_2, $Label_Settings_2, $VIVE_HOME_ApplicationList_Folder
+Global $Button_StartGame, $GameID, $Check_IF_Steam_APP
 
 Local $hQuery, $aRow, $iRows, $iCols, $aNames
 #endregion
@@ -353,7 +354,6 @@ _GUICtrlButton_SetImage($Button_AddIcons, $gfx & "AddIcons.bmp")
 GuiCtrlSetTip(-1, "Adds selected Icon Path to all Steam games in VIVE HOME VR APP.")
 
 
-
 ; Toolbar unten
 Global $Button_Start_VIVEHOME = GUICtrlCreateButton("Start VIVE HOME", 261, 480, 120, 35, $BS_BITMAP)
 _GUICtrlButton_SetImage($Button_Start_VIVEHOME, $gfx & "VIVEHOME.bmp")
@@ -410,6 +410,11 @@ _GUICtrlListView_AddColumn($listview, "Icon Fetch Time", 97)
 
 
 _Read_from_VIVEHOME_DB()
+
+$Button_StartGame = GUICtrlCreateButton("Add Icons", 5, 480, 87, 35, $BS_BITMAP)
+_GUICtrlButton_SetImage($Button_StartGame, $gfx & "StartGame.bmp")
+GuiCtrlSetTip(-1, "Starts selected SteamVR Game.")
+
 $ProcessBar_Status = 90
 GUICtrlSetData($Anzeige_Fortschrittbalken, $ProcessBar_Status)
 
@@ -796,6 +801,8 @@ GUISetOnEvent($GUI_EVENT_CLOSE, "_Beenden")
 GUICtrlSetOnEvent($Button_Exit, "_Beenden")
 GUICtrlSetOnEvent($Button_INFO, "_Button_INFO")
 GUICtrlSetOnEvent($Button_Restart, "_Restart")
+
+GUICtrlSetOnEvent($Button_StartGame, "_Button_StartGame")
 
 GUICtrlSetOnEvent($Checkbox_ShowPlayerOnline, "_Checkbox_ADD_PlayerOnline")
 GUICtrlSetOnEvent($UpDown_ShowPlayerOnline, "_UpDown_PlayerOnline")
@@ -2159,6 +2166,28 @@ Func _Button_Start_VIVEHOME()
 	Sleep(500)
 
 	Exit
+EndFunc
+
+Func _Button_StartGame()
+	$ListView_Selected_Row_Index = _GUICtrlListView_GetSelectedIndices($ListView)
+	$ListView_Selected_Row_Index = Int($ListView_Selected_Row_Index)
+	$ListView_Selected_Row_Nr = $ListView_Selected_Row_Index + 1
+
+	$ListView_Item_Array = _GUICtrlListView_GetItemTextArray($ListView, $ListView_Selected_Row_Index)
+	$ListView_Item_Name = $ListView_Item_Array[2]
+	$ListView_Item_SteamID = $ListView_Item_Array[3]
+
+	$Check_IF_Steam_APP = StringLeft($ListView_Item_SteamID, 10)
+	$GameID = StringReplace($ListView_Item_SteamID, 'steam.app.', '')
+
+	If $Check_IF_Steam_APP = "steam.app." Then
+		_GUICtrlStatusBar_SetText($Statusbar, "Starting Game: " & $ListView_Item_Name  & " - " & $ListView_Item_SteamID & @TAB & "Game ID: " & $GameID & @TAB & "'VIVEHIM - Version " & $Version & "'")
+		ShellExecute("steam://launch/" & $GameID & "/VR\")
+	EndIf
+
+	Sleep(10000)
+
+	_Tab()
 EndFunc
 
 
