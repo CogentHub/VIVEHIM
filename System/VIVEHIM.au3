@@ -35,6 +35,8 @@
 #include <GDIPlus.au3>
 #include <Inet.au3>
 
+#include <IE.au3>
+
 Opt("GUIOnEventMode", 1)
 
 #Region Set Global and Local
@@ -44,7 +46,7 @@ Global $Erster_Start, $Abfrage, $Icon_Preview_Image, $Available_Icon_Preview_Ima
 Global $ListView, $idTreeView, $Statusbar, $GUI, $iwParam, $Button_UpdateIcons, $Check_idRadio_ImagePath
 Global $Application_NR, $Write_AppId, $ListView_Selected_Row_Value
 Global $hWnd, $iMsg, $iwParam, $ilParam, $GetTableArray, $iStylesEx
-Global $id_CreateTreeViewItem, $APP_Name
+Global $id_CreateTreeViewItem, $APP_Name, $AppNR, $AppName, $AppId, $AppIsFavorite, $App_PO_right_now, $App_PO_24h_peak, $App_PO_all_time_peak
 Global $LOOP_Files_1, $SourceFile
 Global $TAB_NR, $TAB_NR_1, $TAB_NR_2, $TAB_NR_3, $TAB_NR_4, $TAB_NR_1_1, $Button_1_0, $Button_2_0
 Global $Name_TAB_1, $Name_TAB_2, $Name_TAB_3, $Name_TAB_4
@@ -133,13 +135,17 @@ Global $PO_right_now, $PO_24h_peak, $PO_all_time, $ListView_Item_Name, $ListView
 Global $Input_Install_Folder, $Button_Install_Folder, $Input_Install_Folder_VIVE_Software, $Button_Install_Folder_VIVE_Software
 Global $Input_Install_Folder_VIVE_HOME, $Button_Install_Folder_VIVE_HOME, $Input_VIVE_HOME, $Button_VIVE_HOME, $Input_VIVE_HOME_VRAPP, $Button_VIVE_HOME_VRAPP
 Global $FileSelectFolder, $Value_Input, $Check_Value_Input, $Label_Settings_2, $Label_Settings_2, $VIVE_HOME_ApplicationList_Folder
-Global $Button_StartGame, $GameID, $Check_IF_Steam_APP
+Global $Button_StartGame, $GameID, $Check_IF_Steam_APP, $oIE, $IE_Adresse, $HTML_GUI, $TreeView_Game_ID, $TreeView_Steam_app_Name
+Global $id_TreeViewItem_AppKey, $id_TreeViewItem_AppNameAppName, $id_TreeViewItem_AppId, $id_TreeViewItem_AppIsFavorite, $id_TreeViewItem_App_PO_right_now, $id_TreeViewItem_App_PO_24h_peak, $id_TreeViewItem_App_PO_all_time_peak
+Global $Content_Current_Groups_ListView, $Content_Available_Groups_ListView, $Checkbox_Overwrite_ApplicationList_INI_on_StartUp
+Global $Button_ADD_Icon, $Status_Checkbox_Overwrite_ApplicationList_INI_on_StartUp, $Status_Checkbox_AutoDownload_Missing_Icons, $Checkbox_AutoDownload_Missing_Icons
+Global $Application_IDNR, $Missing_Steam_app_Name, $Missing_Steam_app_ID
 
 Local $hQuery, $aRow, $iRows, $iCols, $aNames
 #endregion
 
 #Region Declare Variables/Const 1
-Global $Version = "0.5"
+Global $Version = "0.55"
 Global $config_ini = (@ScriptDir & "\config.ini")
 $Install_DIR_StringReplace = StringReplace($config_ini, 'System\config.ini', '')
 $Install_DIR = $Install_DIR_StringReplace
@@ -161,8 +167,8 @@ Global $Icons_DIR_3 = IniRead($Config_INI, "Folders", "Custom_Icon_Folder_1", ""
 Global $Icons_DIR_4 = IniRead($Config_INI, "Folders", "Custom_Icon_Folder_2", "")
 
 $Check_idRadio_ImagePath = IniRead($config_ini, "Settings", "IconPath", "")
-If $Check_idRadio_ImagePath = "" Then IniWrite($config_ini, "Settings", "IconPath", "1")
-If $Check_idRadio_ImagePath = "" Then $Check_idRadio_ImagePath = 1
+If $Check_idRadio_ImagePath = "" Then IniWrite($config_ini, "Settings", "IconPath", "2")
+If $Check_idRadio_ImagePath = "" Then $Check_idRadio_ImagePath = 2
 
 If $Check_idRadio_ImagePath = "" Then $Icons = $Icons
 If $Check_idRadio_ImagePath = "1" Then $Icons = $Icons_DIR_1
@@ -277,15 +283,13 @@ Global $VIVE_HOME_VRAPP_Folder = IniRead($config_ini, "Folders", "VIVE_HOME_VRAP
 Global $VIVE_HOME_ApplicationList_Folder = $VIVE_HOME_Folder & "ApplicationList\"
 Global $Steam_Shortcut_File = "C:\Program Files (x86)\Steam\userdata\193523507\config\shortcuts.vdf"
 Global $Steam_Shortcut_File = "C:\Program Files (x86)\Steam\userdata\193523507\config\shortcuts_temp.vdf"
-
-FileDelete($ApplicationList_INI)
 #endregion
 
 
 #region Declare Names
-$Name_TAB_1 = "VIVE HOME (VR APP)"
-$Name_TAB_2 = "VIVE HOME (DESKTOP APP)"
-$Name_TAB_3 = "SHORTCUS + WIDGETS"
+$Name_TAB_1 = "VIVE HOME Database"
+$Name_TAB_2 = "GAMES Overview"
+$Name_TAB_3 = "ICONS + FAVORITES + WIDGETS"
 $Name_TAB_4 = "SETTINGS"
 #endregion
 
@@ -299,7 +303,7 @@ If @AutoItX64 Then $Wow64 = "\Wow6432Node"
 Local $sPath = RegRead("HKEY_LOCAL_MACHINE\SOFTWARE" & $Wow64 & "\AutoIt v3\AutoIt", "InstallDir") & "\Examples\GUI\Advanced\Images"
 
 ; Erstellen der GUI
-$GUI = GUICreate("VIVE HOME Icon Manager", 643, 545, -1, -1, BitOR($WS_MINIMIZEBOX, $WS_CAPTION, $WS_POPUP, $WS_EX_CLIENTEDGE, $WS_EX_TOOLWINDOW)) ;535
+$GUI = GUICreate("VIVE HOME Icon Manager", 643, 545, -1, -1, BitOR($WS_MINIMIZEBOX, $WS_CAPTION, $WS_POPUP, $WS_EX_CLIENTEDGE, $WS_EX_TOOLWINDOW))
 
 ; PROGRESS
 $Anzeige_Fortschrittbalken = GUICtrlCreateProgress(0, 520, 644, 5)
@@ -333,7 +337,7 @@ GUICtrlSetFont(-1, 8, 400, 6, $font_arial)
 $Check_idRadio_ImagePath = IniRead($config_ini, "Settings", "IconPath", "")
 
 If $Check_idRadio_ImagePath = "" Then IniWrite($config_ini, "Settings", "IconPath", "1")
-If $Check_idRadio_ImagePath = "" Then $Check_idRadio_ImagePath = 1
+If $Check_idRadio_ImagePath = "" Then $Check_idRadio_ImagePath = 2
 
 Global $idRadio_ImagePath_1 = GUICtrlCreateRadio("Use VIVE Dashboard folder", 182, 13, 145, 15)
 If $Check_idRadio_ImagePath = "1" Then GUICtrlSetState(-1, $GUI_CHECKED)
@@ -374,7 +378,7 @@ GuiCtrlSetTip(-1, "Closes VIVEHIM.")
 
 _GUICtrlStatusBar_SetText($Statusbar, "LOADING, please wait..." & @TAB & @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
 
-_Search_Files()
+;_Search_Files()
 
 ; TABS ERSTELLEN
 $TAB_NR = GUICtrlCreateTab(2, 50, 1095, 575, BitOR($TCS_BUTTONS, $TCS_FLATBUTTONS))
@@ -405,82 +409,29 @@ _GUICtrlListView_AddColumn($listview, "Icon Url", 88)
 _GUICtrlListView_AddColumn($listview, "Icon Timestamp", 98)
 _GUICtrlListView_AddColumn($listview, "Icon Fetch Time", 97)
 
-_Read_from_VIVEHOME_DB()
+;_Read_from_VIVEHOME_DB()
 
 $Button_StartGame = GUICtrlCreateButton("Add Icons", 5, 480, 87, 35, $BS_BITMAP)
 _GUICtrlButton_SetImage($Button_StartGame, $gfx & "StartGame.bmp")
 GuiCtrlSetTip(-1, "Starts selected SteamVR Game.")
-
-$ProcessBar_Status = 90
-GUICtrlSetData($Anzeige_Fortschrittbalken, $ProcessBar_Status)
 
 GUICtrlCreateTabItem("")
 
 
 $TAB_NR_2 = GUICtrlCreateTabItem($Name_TAB_2)
 
-Local $Kopfzeile_Explorerbaum = GUICtrlCreateListView("", 0, 70, 650, 28, BitOR($LVS_SHOWSELALWAYS, $LVS_NOSORTHEADER, $LVS_REPORT), $TAB_NR_2)
+Local $Kopfzeile_Explorerbaum = GUICtrlCreateListView("", 0, 70, 650, 25, BitOR($LVS_SHOWSELALWAYS, $LVS_NOSORTHEADER, $LVS_REPORT), $TAB_NR_2)
 _GUICtrlListView_SetExtendedListViewStyle($Kopfzeile_Explorerbaum, BitOR($LVS_EX_FULLROWSELECT, $LVS_EX_GRIDLINES, $LVS_EX_DOUBLEBUFFER))
 
 _GUICtrlListView_AddColumn($Kopfzeile_Explorerbaum, "VIVE HOME - Application Overview", 645)
 Local $iStyle = BitOR($TVS_EDITLABELS, $TVS_HASBUTTONS, $TVS_HASLINES, $TVS_LINESATROOT, $TVS_DISABLEDRAGDROP, $TVS_SHOWSELALWAYS)
 
-Local $idTreeView = GUICtrlCreateTreeView(0, 97, 645, 377, $iStyle, $WS_EX_CLIENTEDGE)
-
-$NR_Applications = IniRead($ApplicationList_INI, "ApplicationList", "NR_Applications", "")
-If $NR_Applications = "" Then $NR_Applications = 1
-
-For $I = 0 To $NR_Applications
-
-	$AppId = IniRead($ApplicationList_INI, "Application_" & $I, "AppId", "")
-	$Name = IniRead($ApplicationList_INI, "Application_" & $I, "Name", "")
-	$ContentInfo_AppKey = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_AppKey", "")
-	$ContentInfo_Name = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_Name", "")
-	$ContentInfo_LaunchType = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_LaunchType", "")
-	$ContentInfo_WorkingDirectory = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_WorkingDirectory", "")
-	$ContentInfo_BinaryPath = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_BinaryPath", "")
-	$ContentInfo_Arguments = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_Arguments", "")
-	$ContentInfo_URL = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_URL", "")
-	$ContentInfo_Description = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_Description", "")
-	$ContentInfo_NewsURL = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_NewsURL", "")
-	$ContentInfo_ImagePath_Source = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_ImagePath", "")
-	$ContentInfo_ImagePath_1 = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_ImagePath_1", "")
-	$ContentInfo_ImagePath_2 = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_ImagePath_2", "")
-	$ContentInfo_ImagePath_3 = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_ImagePath_3", "")
-	$ContentInfo_Source = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_Source", "")
-	$ContentInfo_IsDashboardOverlay = IniRead($ApplicationList_INI, "Application_" & $I, "ContentInfo_IsDashboardOverlay", "")
-
-	If $Name <> "" Then Global $id_CreateTreeViewItem = GUICtrlCreateTreeViewItem($Name, $idTreeView)
-	GUICtrlSetOnEvent($id_CreateTreeViewItem, "_Change_Preview_Icon_Desktop_APP")
-
-		If $ContentInfo_AppKey <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("AppKey:  " & $ContentInfo_AppKey, $id_CreateTreeViewItem)
-		If $ContentInfo_Name <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("Name:  " & $ContentInfo_Name, $id_CreateTreeViewItem)
-		If $ContentInfo_LaunchType <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("LaunchType:  " & $ContentInfo_LaunchType, $id_CreateTreeViewItem)
-		If $ContentInfo_WorkingDirectory <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("WorkingDirectory:  " & $ContentInfo_WorkingDirectory, $id_CreateTreeViewItem)
-		If $ContentInfo_BinaryPath <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("BinaryPath:  " & $ContentInfo_BinaryPath, $id_CreateTreeViewItem)
-		If $ContentInfo_Arguments <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("Arguments:  " & $ContentInfo_Arguments, $id_CreateTreeViewItem)
-		If $ContentInfo_URL <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("URL:  " & $ContentInfo_URL, $id_CreateTreeViewItem)
-		If $ContentInfo_Description <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("Description:  " & $ContentInfo_Description, $id_CreateTreeViewItem)
-		If $ContentInfo_NewsURL <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("NewsURL:  " & $ContentInfo_NewsURL, $id_CreateTreeViewItem)
-		If $ContentInfo_ImagePath_Source <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("ImagePath_Source:  " & $ContentInfo_ImagePath_Source, $id_CreateTreeViewItem)
-		If $ContentInfo_ImagePath_1 <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("ImagePath_1:  " & $ContentInfo_ImagePath_1, $id_CreateTreeViewItem)
-		If $ContentInfo_ImagePath_2 <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("ImagePath_2:  " & $ContentInfo_ImagePath_2, $id_CreateTreeViewItem)
-		If $ContentInfo_ImagePath_3 <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("ImagePath_3:  " & $ContentInfo_ImagePath_3, $id_CreateTreeViewItem)
-		If $ContentInfo_Source <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("Source:  " & $ContentInfo_Source, $id_CreateTreeViewItem)
-		If $ContentInfo_IsDashboardOverlay <> "" Then $id_ContentInfo_AppKey = GUICtrlCreateTreeViewItem("IsDashboardOverlay:  " & $ContentInfo_IsDashboardOverlay, $id_CreateTreeViewItem)
-Next
-
+Local $idTreeView = GUICtrlCreateTreeView(0, 93, 644, 377, $iStyle, $WS_EX_CLIENTEDGE)
 
 GUICtrlCreateTabItem("")
 
-$ProcessBar_Status = 93
-GUICtrlSetData($Anzeige_Fortschrittbalken, $ProcessBar_Status)
 
 $TAB_NR_3 = GUICtrlCreateTabItem($Name_TAB_3)
-
-_Read_Steam_Shortcuts()
-$ProcessBar_Status = 96
-GUICtrlSetData($Anzeige_Fortschrittbalken, $ProcessBar_Status)
 
 $font = "arial"
 $font_arial = "arial"
@@ -499,114 +450,20 @@ _GUICtrlListView_SetColumnWidth($Current_Groups_ListView, 0, 178)
 $Available_Groups_ListView  = GUICtrlCreateListView("Available Groups", 220, 300, 200, 160)
 _GUICtrlListView_SetColumnWidth($Available_Groups_ListView, 0, 178)
 
-$IconsDrop2_ListView  = GUICtrlCreateListView("Drop here",  350, 97, 70, 60)
-_GUICtrlListView_SetExtendedListViewStyle($IconsDrop2_ListView, BitOR($LVS_EX_FULLROWSELECT, $LVS_EX_DOUBLEBUFFER))
-_GUICtrlListView_SetColumnWidth($IconsDrop2_ListView, 0, 65)
-
-
-; Create arrays and fill ListViews
-$NR_Shorcuts = IniRead($Shortcuts_INI, "NR_Shorcuts", "NR", "")
-$GameName = _GUICtrlListView_GetItemTextArray($listview)
-$NR_GameNames = IniRead($ApplicationList_INI, "ApplicationList", "NR_Applications", "")
-
-$FileList_IconsFolder_1 = _FileListToArray($Icons, "*.jpg")
-
-If $FileList_IconsFolder_1 <> 0 Then
-	$NR_Icons = $FileList_IconsFolder_1[0]
-Else
-	$NR_Icons = 0
-EndIf
-
-
-Global $Content_Current_Shorcuts_ListView[$NR_Icons], $Content_Available_Games_ListView[$NR_GameNames]
-Global $Content_Current_Groups_ListView[$NR_Shorcuts], $Content_Available_Groups_ListView[10], $Content_IconsDrop2_ListView[1]
-
-For $LOOP_Content_1 = 1 To $NR_GameNames ; - 1
-	$GameName = IniRead($ApplicationList_INI, "Application_" & $LOOP_Content_1, "Name", "")
-	$Available_GameName = $GameName
-
-	If $Available_GameName <> "" Then
-		$Content_Available_Games_ListView[$LOOP_Content_1 - 1] = $Available_GameName
-		$Available_Games_ListViewItem = GUICtrlCreateListViewItem($Available_GameName, $Available_Games_ListView)
-		GUICtrlSetOnEvent($Available_Games_ListViewItem, "_ClickOn_Current_Available_Games_ListView")
-
-		$ApplicationList_AppId = IniRead($ApplicationList_INI, "Application_" & $LOOP_Content_1, "AppId", "")
-		$ApplicationList_IsFavorite = IniRead($ApplicationList_INI, "Application_" & $ApplicationList_AppId, "IsFavorite", "")
-		If $ApplicationList_IsFavorite = "true" Then _GUICtrlListView_SetItemChecked($Available_Games_ListView, $LOOP_Content_1 - 1)
-	EndIf
-Next
-
-For $LOOP_Content_2 = 1 To $NR_Icons
-	$WidgetName = $FileList_IconsFolder_1[$LOOP_Content_2]
-
-	If $WidgetName <> "" Then
-		$Content_Current_Shorcuts_ListView[$LOOP_Content_2 - 1] = $WidgetName
-		$Current_Shortcuts_ListViewItem = GUICtrlCreateListViewItem($WidgetName, $Current_Shortcuts_ListView)
-		GUICtrlSetOnEvent($Current_Shortcuts_ListViewItem, "_ClickOn_Current_Shortcuts_ListView")
-	EndIf
-Next
-
-For $LOOP_Content_3 = 1 To $NR_Shorcuts ;- 1
-	$GroupWidgetName = IniRead($Shortcuts_INI, "Shortcut_" & $LOOP_Content_3, "WidgetName", "")
-	$GroupWidgetUID = IniRead($Shortcuts_INI, "Shortcut_" & $LOOP_Content_3, "WidgetUID", "")
-	$currentFilePath = IniRead($Shortcuts_INI, "Shortcut_" & $LOOP_Content_3, "currentFilePath", "")
-
-	If $GroupWidgetUID = "htc_widget_photo_frame" Then
-		If $GroupWidgetName = "" Then
-			$GroupWidgetName = $currentFilePath
-
-			$NR_Name_from_Path = StringInStr($GroupWidgetName, "\\", 0, -1)
-			$Name_from_Path_1 = StringTrimLeft($GroupWidgetName, $NR_Name_from_Path + 1)
-
-			$GroupName_Check = StringInStr($GroupWidgetName, "Group_", 0, -1)
-
-			If $GroupName_Check <> 0 Then
-				$Name_from_Path_2 = StringReplace($Name_from_Path_1, "Group_", "")
-				$Name_from_Path_3 = StringReplace($Name_from_Path_2, ".jpg", "")
-				$Name_from_Path = $Name_from_Path_3
-				$GroupWidgetName = $Name_from_Path
-			EndIf
-
-		EndIf
-
-		$Content_Current_Groups_ListView[$LOOP_Content_3 - 1] = $GroupName
-		GUICtrlCreateListViewItem($GroupWidgetName, $Current_Groups_ListView)
-	EndIf
-Next
-
-For $LOOP_Content_4 = 1 To 10
-	$GroupName = IniRead($Config_INI, "Groups", "Group_" & $LOOP_Content_4, "")
-	$Content_Available_Groups_ListView[$LOOP_Content_4 - 1] = $GroupName
-    $Available_Groups_ListViewItem = GUICtrlCreateListViewItem($GroupName, $Available_Groups_ListView)
-	GUICtrlSetOnEvent($Available_Groups_ListViewItem, "_ClickOn_Available_Groups_ListView")
-Next
-
-For $LOOP_Content_5 = 1 To 1
-	$GroupName = ""
-	$Content_IconsDrop2_ListView[0] = $GroupName
-    GUICtrlCreateListViewItem($GroupName, $IconsDrop2_ListView)
-Next
 
 GUICtrlCreateLabel("Current Icon", 210, 82, 160, 20) ;
 GUICtrlSetFont(-1, 11, 400, 2, $font_arial)
 $Available_Icon_Preview_Image_1 = GUICtrlCreatePic($gfx & "Icon_Preview_4.jpg", 210, 97, 130, 60)
 
-GUICtrlCreateLabel("NEW Icon", 350, 82, 160, 20) ;
+GUICtrlCreateLabel("ADD Icon", 353, 82, 160, 20) ;
 GUICtrlSetFont(-1, 11, 400, 2, $font_arial)
 
 GUICtrlCreateLabel("Selected Icon", 300, 170, 160, 20) ;
 GUICtrlSetFont(-1, 11, 400, 2, $font_arial)
 $Available_Icon_Preview_Image_2 = GUICtrlCreatePic($gfx & "Icon_Preview_2.jpg", 300, 185, 130, 60)
 
-
-$ProcessBar_Status = 100
-GUICtrlSetData($Anzeige_Fortschrittbalken, $ProcessBar_Status)
-
-; Initiate ListViews and set differing external drag/drop states
-$iLV_Current_Shortcuts_ListView = _GUIListViewEx_Init($Current_Shortcuts_ListView, $Content_Current_Shorcuts_ListView, 1, 0, True, 128 + 256)
-$iLV_Current_Groups_ListView = _GUIListViewEx_Init($Current_Groups_ListView, $Content_Current_Groups_ListView, 0, 0, True)
-$iLV_Available_Groups_ListView = _GUIListViewEx_Init($Available_Groups_ListView, $Content_Available_Groups_ListView, 0, 0, True, 128 + 256)
-$iLV_IconsDrop2_ListView = _GUIListViewEx_Init($IconsDrop2_ListView, $Content_IconsDrop2_ListView, 0, 0, True)
+$Button_ADD_Icon = GUICtrlCreateButton("ADD Icon", 350, 97, 70, 40, $BS_BITMAP)
+_GUICtrlButton_SetImage($Button_ADD_Icon, $gfx & "ADD_Icon.bmp")
 
 
 
@@ -619,7 +476,7 @@ GUICtrlSetFont(-1, 11, 400, 6, $font_arial)
 $Label_Shortcut_Settings_Group_Name = GUICtrlCreateLabel("Group Name:", 440, 320, 200, 20) ;
 GUICtrlSetFont(-1, 11, 400, 1, $font_arial)
 $Input_Group_Name = GUICtrlCreateInput("", 440, 340, 160, 20)
-$Button_Save_GroupName = GUICtrlCreateButton("SAVE", 605, 340, 20, 20, $BS_BITMAP) ;Fragezeichen ; Y=3
+$Button_Save_GroupName = GUICtrlCreateButton("SAVE", 605, 340, 20, 20, $BS_BITMAP)
 _GUICtrlButton_SetImage($Button_Save_GroupName, $gfx & "Save.bmp")
 
 $Status_Checkbox_Group_IsVisible = IniRead($config_ini,"Group_Settings", "IsVisible", "")
@@ -712,7 +569,7 @@ GuiCtrlSetTip(-1, "Saves Folder Path.")
 _GUICtrlButton_SetImage($Button_Install_Folder_VIVE_Software_open, $gfx & "Folder_small.bmp")
 _GUICtrlButton_SetImage($Button_Install_Folder_VIVE_Software_save, $gfx & "Save.bmp")
 
-GUICtrlCreateLabel("VIVE_HOME Install path:", 10, 162, 265, 20)
+GUICtrlCreateLabel("VIVE HOME Install path:", 10, 162, 265, 20)
 GUICtrlSetFont(-1, 11, 400, 1, $font_arial)
 $Input_Install_Folder_VIVE_HOME = GUICtrlCreateInput($Install_Folder_VIVE_HOME, 10, 179, 315, 20)
 GuiCtrlSetTip(-1, "Enter Folder path.")
@@ -725,7 +582,7 @@ GuiCtrlSetTip(-1, "Saves Folder Path.")
 _GUICtrlButton_SetImage($Button_Install_Folder_VIVE_HOME_open, $gfx & "Folder_small.bmp")
 _GUICtrlButton_SetImage($Button_Install_Folder_VIVE_HOME_save, $gfx & "Save.bmp")
 
-GUICtrlCreateLabel("VIVE_HOME Desktop APP path", 10, 212, 265, 20)
+GUICtrlCreateLabel("VIVE HOME Desktop APP path", 10, 212, 265, 20)
 GUICtrlSetFont(-1, 11, 400, 1, $font_arial)
 GUICtrlCreateLabel("[Settings]:", 210, 212, 80, 20)
 GUICtrlSetColor(-1, "0x0000FF")
@@ -745,7 +602,7 @@ _GUICtrlButton_SetImage($Button_VIVE_HOME_open, $gfx & "Folder_small.bmp")
 _GUICtrlButton_SetImage($Button_VIVE_HOME_save, $gfx & "Save.bmp")
 _GUICtrlButton_SetImage($Button_VIVE_HOME_delete, $gfx & "Delete_small.bmp")
 
-GUICtrlCreateLabel("VIVE_HOME VR APP path", 10, 252, 180, 20)
+GUICtrlCreateLabel("VIVE HOME VR APP path", 10, 252, 180, 20)
 GUICtrlSetFont(-1, 11, 400, 1, $font_arial)
 GUICtrlCreateLabel("[Settings]:", 176, 252, 80, 20)
 GUICtrlSetColor(-1, "0x0000FF")
@@ -772,15 +629,22 @@ If $Status_Checkbox_Load_ShowPlayerOnline_on_StartUp = "True" Then GUICtrlSetSta
 GuiCtrlSetTip(-1, "Loads Players Online count Data on_StartUp for use in the GUI. " & @CRLF & @CRLF & _
 					"It loads the Player Count for all SteamVR Games on StartUP. " & "Choose a Game in TAB '" & $Name_TAB_1 & "' to see the Number of Players that are currently online." & @CRLF & _
 					"This function will slow down the StartUp Time for VIHEHIM on Start." & @CRLF & @CRLF)
+GUICtrlSetFont(-1, 11, 400, 1, $font_arial)
 
+$Status_Checkbox_Overwrite_ApplicationList_INI_on_StartUp = IniRead($config_ini,"Settings", "Overwrite_ApplicationList_INI_on_StartUp", "")
+$Checkbox_Overwrite_ApplicationList_INI_on_StartUp = GUICtrlCreateCheckbox(" Overwrite 'ApplicationList.ini' on StartUp", 11, 320, 300, 20)
+If $Status_Checkbox_Overwrite_ApplicationList_INI_on_StartUp = "True" Then GUICtrlSetState(-1, $GUI_CHECKED)
+GuiCtrlSetTip(-1, "Overwrites/Creates the File 'ApplicationList.ini' in '...\VIVEHIM\System\' Folder on every StartUp. " & @CRLF & @CRLF & _
+					"This function will slow down the StartUp Time for VIHEHIM on Start." & @CRLF & @CRLF)
+GUICtrlSetFont(-1, 11, 400, 1, $font_arial)
+
+$Status_Checkbox_AutoDownload_Missing_Icons = IniRead($config_ini,"Settings", "AutoDownload_Missing_Icons", "")
+$Checkbox_AutoDownload_Missing_Icons = GUICtrlCreateCheckbox(" Automatically Download missing Icons on StartUp [for Steam Games]", 11, 340, 450, 20)
+If $Status_Checkbox_AutoDownload_Missing_Icons = "True" Then GUICtrlSetState(-1, $GUI_CHECKED)
+GuiCtrlSetTip(-1, "Automatically tries to Download missing Icons on StartUp if Icon cannot be found." & @CRLF & @CRLF)
 GUICtrlSetFont(-1, 11, 400, 1, $font_arial)
 
 GUICtrlCreateTabItem("")
-
-$ProcessBar_Status = 100
-GUICtrlSetData($Anzeige_Fortschrittbalken, $ProcessBar_Status)
-
-
 #endregion
 
 #Region Funktionen Verknüpfen
@@ -790,6 +654,7 @@ GUICtrlSetOnEvent($Button_Exit, "_Beenden")
 GUICtrlSetOnEvent($Button_INFO, "_Button_INFO")
 GUICtrlSetOnEvent($Button_Restart, "_Restart")
 
+GUICtrlSetOnEvent($Button_ADD_Icon, "_Button_ADD_Icon")
 GUICtrlSetOnEvent($Button_StartGame, "_Button_StartGame")
 
 GUICtrlSetOnEvent($Checkbox_ShowPlayerOnline, "_Checkbox_ADD_PlayerOnline")
@@ -817,6 +682,8 @@ GUICtrlSetOnEvent($Button_VIVE_HOME_delete, "_Button_VIVE_HOME_delete")
 GUICtrlSetOnEvent($Button_VIVE_HOME_VRAPP_delete, "_Button_VIVE_HOME_VRAPP_delete")
 
 GUICtrlSetOnEvent($Checkbox_Load_ShowPlayerOnline_on_StartUp, "_Checkbox_Load_ShowPlayerOnline_on_StartUp")
+GUICtrlSetOnEvent($Checkbox_Overwrite_ApplicationList_INI_on_StartUp, "_Checkbox_Overwrite_ApplicationList_INI_on_StartUp")
+GUICtrlSetOnEvent($Checkbox_AutoDownload_Missing_Icons, "_Checkbox_AutoDownload_Missing_Icons")
 
 GUICtrlSetOnEvent($Button_Start_VIVEHOME, "_Button_Start_VIVEHOME")
 GUICtrlSetOnEvent($Button_UpdateIcons, "_Button_UpdateIcons")
@@ -841,17 +708,21 @@ GUICtrlSetOnEvent($idRadio_GroupImage_3, "_idRadio_GroupImage_3")
 
 Sleep(500)
 GUICtrlSetData($Anzeige_Fortschrittbalken, 0)
-
-_GUICtrlStatusBar_SetText($Statusbar, "Program was loaded and can now be used." & @TAB & @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
-
 #endregion
 
+_Search_Files()
+_Read_from_VIVEHOME_DB()
+GUICtrlSetData($Anzeige_Fortschrittbalken, 90)
+_Create_TreeView()
+GUICtrlSetData($Anzeige_Fortschrittbalken, 100)
+_Read_Steam_Shortcuts()
+_Create_ListViews_TAB_3()
 _Tab()
-
-GUISetState(@SW_SHOW)
+GUICtrlSetData($Anzeige_Fortschrittbalken, 0)
+_GUICtrlStatusBar_SetText($Statusbar, "Program loaded and can now be used." & @TAB & @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
+GUICtrlSetState($TAB_NR_1_1,$GUI_SHOW)
 
 _GUIListViewEx_MsgRegister()
-
 
 #Region While 1
 
@@ -869,14 +740,12 @@ While 1
 	$sRet = _GUIListViewEx_DragEvent()
 	If $sRet <> "" Then
 
-
-
 		If  $sRet = "1:1" Then
-
 			$NR_ROWS_old = UBound($Content_Current_Shortcuts_ListView, $UBOUND_ROWS)
 			$NEW_Content_Available_Shortcuts_ListView = _GUIListViewEx_ReturnArray($iLV_Current_Shortcuts_ListView)
 
 			_Update_ListView_Available_Icons()
+			_Tab()
 		EndIf
 
 		If  $sRet = "1:2" Then
@@ -885,34 +754,10 @@ While 1
 		EndIf
 
 		If  $sRet = "1:4" Then
-
-			_Droped_Icon()
-
-			_GUICtrlListView_DeleteAllItems($IconsDrop2_ListView)
-
-			For $LOOP_Content_10 = 1 To 1
-				$GroupName = "" ; Drop here
-				$Content_IconsDrop2_ListView[0] = $GroupName
-				GUICtrlCreateListViewItem($GroupName, $IconsDrop2_ListView)
-			Next
-
-			_GUICtrlListView_DeleteAllItems($Current_Shortcuts_ListView)
-
-			For $LOOP_Content_11 = 1 To $NR_Icons
-				$WidgetName = $FileList_IconsFolder_1[$LOOP_Content_11]
-
-				If $WidgetName <> "" Then
-					$Content_Current_Shorcuts_ListView[$LOOP_Content_11 - 1] = $WidgetName
-					;MsgBox(0, "", $Content_Current_Shorcuts_ListView[$LOOP_Content_2])
-					$Current_Shortcuts_ListViewItem = GUICtrlCreateListViewItem($WidgetName, $Current_Shortcuts_ListView)
-					GUICtrlSetOnEvent($Current_Shortcuts_ListViewItem, "_ClickOn_Current_Shortcuts_ListView")
-				EndIf
-			Next
-
+			_Tab()
 		EndIf
 
 		If  $sRet = "2:1" Then
-
 			$NEW_Content_Available_Shortcuts_ListView = _GUIListViewEx_ReturnArray($iLV_Available_Shortcuts_ListView)
 			$NEW_Content_Current_Shortcuts_ListView = _GUIListViewEx_ReturnArray($iLV_Current_Shortcuts_ListView)
 
@@ -942,11 +787,9 @@ While 1
 			_Create_Shortcut_INI()
 			_Write_Steam_Shortcuts()
 			_Tab()
-
 		EndIf
 
 		If  $sRet = "3:2" Then
-
 			$NEW_Content_Available_Groups_ListView = _GUIListViewEx_ReturnArray($iLV_Available_Groups_ListView)
 			$NEW_Content_Current_Groups_ListView = _GUIListViewEx_ReturnArray($iLV_Current_Groups_ListView)
 
@@ -983,11 +826,9 @@ While 1
 			_Create_Groups_INI()
 			_Write_Steam_Groups()
 			_Tab()
-
 		EndIf
 
 		If  $sRet = "3:3" Then
-
 			$NR_ROWS_old = UBound($Content_Available_Groups_ListView, $UBOUND_ROWS)
 			$NEW_Content_Available_Groups_ListView = _GUIListViewEx_ReturnArray($iLV_Available_Groups_ListView)
 
@@ -999,12 +840,10 @@ While 1
 				$Available_Groups_ListViewItem = GUICtrlCreateListViewItem($GroupName, $Available_Groups_ListView)
 				GUICtrlSetOnEvent($Available_Groups_ListViewItem, "_ClickOn_Available_Groups_ListView")
 			Next
-
 			_Tab()
 		EndIf
 
 		If  $sRet = "3:4" Then
-
 			_GUICtrlListView_DeleteAllItems($IconsDrop2_ListView)
 
 			For $LOOP_Content_5 = 1 To 1
@@ -1012,7 +851,7 @@ While 1
 				$Content_IconsDrop2_ListView[0] = $GroupName
 				GUICtrlCreateListViewItem($GroupName, $IconsDrop2_ListView)
 			Next
-
+			_Tab()
 		EndIf
 
 		If  $sRet = "4:2" Then
@@ -1080,106 +919,6 @@ Func _ClickOn_Available_Groups_ListView()
 	$DragandDrop_Name = $GameName
 
 	_ListView_AvailableGroups_Click()
-EndFunc
-
-Func _Droped_Icon()
-	$Check_idRadio_ImagePath = IniRead($config_ini, "Settings", "IconPath", "")
-
-	$Icon_Folder = $Icons
-	If $Check_idRadio_ImagePath = "" Then $Icon_Folder = $Icons
-	If $Check_idRadio_ImagePath = "1" Then $Icon_Folder = $Icons_DIR_1
-	If $Check_idRadio_ImagePath = "2" Then $Icon_Folder = $Icons_DIR_2
-	If $Check_idRadio_ImagePath = "3" Then $Icon_Folder = $Icons_DIR_3
-	If $Check_idRadio_ImagePath = "4" Then $Icon_Folder = $Icons_DIR_4
-
-	$ListView_IconsDrop2_Selected_Row_Index = _GUICtrlListView_GetSelectedIndices($Available_Games_ListView)
-	$ListView_IconsDrop2_Selected_Row_Index = Int($ListView_IconsDrop2_Selected_Row_Index)
-	$ListView_IconsDrop2_Selected_Row_Nr = $ListView_IconsDrop2_Selected_Row_Index + 1
-
-	$GameName_IconsDrop2 = _GUICtrlListView_GetItemText($Available_Games_ListView, $ListView_IconsDrop2_Selected_Row_Nr - 1, 0)
-
-	$Drop_IconName = $IconName
-
-	$ListView_Item_Array = 0
-	$ListView_Selected_Row_Value = ""
-
-	$ListView_Selected_Row_Index = _GUICtrlListView_GetSelectedIndices($ListView)
-	$ListView_Selected_Row_Index = Int($ListView_Selected_Row_Index)
-	$ListView_Selected_Row_Nr = $ListView_Selected_Row_Index + 1
-
-    $ListView_Item_Array = _GUICtrlListView_GetItemTextArray($ListView, $ListView_Selected_Row_Index)
-	$ListView_Item_Name_ID = $ListView_Item_Array[2] & " - " & $ListView_Item_Array[3]
-
-	For $LOOP_Check_Name_1 = 1 To $ListView_Item_Array[0]
-		$ListView_Check_Name_Array = _GUICtrlListView_GetItemTextArray($ListView, $LOOP_Check_Name_1)
-		;MsgBox(0, "1", $GameName_IconsDrop2 & " : " & $ListView_Check_Name_Array[2])
-		If $GameName_IconsDrop2 = $ListView_Check_Name_Array[2] Then
-			$Drop_IconAppKey = $ListView_Check_Name_Array[3]
-			;MsgBox(0, "2", $Drop_IconAppKey)
-			ExitLoop
-		EndIf
-	Next
-
-	$VIVE_Home_DB_Path = $VIVE_HOME_VRAPP_Folder & "vive.sqlite"
-	$VIVE_Home_DB_TABLE_Name = "apps"
-
-	Global $hQuery, $aRow, $iRows, $iCols, $aNames
-
-	_SQLite_Startup()
-
-	Global $VIVE_Home_DB = _SQLite_Open($VIVE_Home_DB_Path) ; open Database
-
-	_SQLite_GetTable2d(-1, "SELECT * FROM " & $VIVE_Home_DB_TABLE_Name & ";", $aRow, $iRows, $iCols)
-	If $iRows <> "" Then $iRows = $iRows + 1
-	If $iRows = "" Then $iRows = 1
-
-
-	_SQLite_Query($VIVE_Home_DB, "SELECT ROWID,* FROM " & $VIVE_Home_DB_TABLE_Name & " ORDER BY ROWID;", $hQuery)
-
-
-	_SQLite_FetchNames($hQuery, $aNames)
-	;ConsoleWrite(StringFormat(" %-10s  %-10s  %-10s  %-10s %-10s  %-10s  %-10s  %-10s %-10s  %-10s  %-10s ", $aNames[0], $aNames[1], $aNames[2], $aNames[3], $aNames[4], $aNames[5], $aNames[6], $aNames[7], $aNames[8], $aNames[9]) & @CRLF)
-
-	While _SQLite_FetchData($hQuery, $aRow, False, False) = $SQLITE_OK ; Read Out the next Row
-		;ConsoleWrite(StringFormat(" %-10s  %-10s  %-10s  %-10s %-10s  %-10s  %-10s  %-10s %-10s  %-10s  %-10s ", $aRow[0], $aRow[1], $aRow[2], $aRow[3], $aRow[4], $aRow[5], $aRow[6], $aRow[7], $aRow[8], $aRow[9]) & @CRLF)
-	WEnd
-
-	_SQLite_Query($VIVE_Home_DB, "SELECT ROWID,* FROM " & $VIVE_Home_DB_TABLE_Name & " ORDER BY ROWID;", $hQuery)
-	_SQLite_FetchNames($hQuery, $aNames)
-
-
-	For $NR = 1 To $iRows - 1
-		_SQLite_GetTable2d(-1, "SELECT * FROM " & $VIVE_Home_DB_TABLE_Name & ";", $aRow, $iRows, $iCols)
-		If $iRows <> "" Then $iRows = $iRows + 1
-		If $iRows = "" Then $iRows = 1
-
-		_SQLite_FetchData($hQuery, $aRow, False, False) ; Read Out the next Row
-		;ConsoleWrite(StringFormat(" %-10s  %-10s  %-10s  %-10s %-10s  %-10s  %-10s  %-10s %-10s  %-10s  %-10s ", $aRow[0], $aRow[1], $aRow[2], $aRow[3], $aRow[4], $aRow[5], $aRow[6], $aRow[7], $aRow[8], $aRow[9]) & @CRLF)
-
-		If $Drop_IconAppKey = $aRow[1] Then
-			$Drop_Icon_Path = $Icon_Folder & $Drop_IconName
-			$New_Icon_URL = $aRow[7]
-			$New_Icon_Path = $Drop_Icon_Path
-
-			_SQLite_Exec($VIVE_Home_DB, "REPLACE INTO " & $VIVE_Home_DB_TABLE_Name & "(rowid,app_key,launch_count,last_launched,total_played,is_favorite,installed_time,img_url,img_timestamp,img_file_path,img_fetch_time) VALUES ('" & _
-											$aRow[0] & "','" & $aRow[1] & "','" & $aRow[2] & "','" & $aRow[3] & "','" & $aRow[4] & "','" & $aRow[5] & "','" & $aRow[6] & "','" & $New_Icon_URL & "','" & $aRow[8] & "','" & $New_Icon_Path & "','" & $aRow[10] & "');")
-
-		Else
-			_SQLite_Exec($VIVE_Home_DB, "REPLACE INTO " & $VIVE_Home_DB_TABLE_Name & "(rowid,app_key,launch_count,last_launched,total_played,is_favorite,installed_time,img_url,img_timestamp,img_file_path,img_fetch_time) VALUES ('" & _
-											$aRow[0] & "','" & $aRow[1] & "','" & $aRow[2] & "','" & $aRow[3] & "','" & $aRow[4] & "','" & $aRow[5] & "','" & $aRow[6] & "','" & $aRow[7] & "','" & $aRow[8] & "','" & $aRow[9] & "','" & $aRow[10] & "');")
-		EndIf
-	Next
-
-	_SQLite_QueryFinalize($hQuery)
-	_SQLite_Close($VIVE_HOME_VRAPP_Folder & "vive.sqlite")
-	_SQLite_Shutdown()
-
-	Sleep(100)
-
-	$ListView_Item_Array = 0
-	$ListView_Selected_Row_Value = ""
-
-	_Read_from_VIVEHOME_DB()
 EndFunc
 
 
@@ -2042,17 +1781,27 @@ EndFunc
 
 Func _Change_Preview_Icon_Desktop_APP()
 	Local $ID = GUICtrlRead($idTreeView)
-	$ID = $ID + 1
+	$ID = $ID + 3
     Local $Handle = _GUICtrlTreeView_GetItemHandle($idTreeView, $ID)
     Local $Text = _GUICtrlTreeView_GetText($idTreeView, $Handle)
 
-	$TreeView_Steam_app_ID = StringReplace($Text, 'AppKey:  ' , '')
+	$TreeView_Steam_app_ID = StringReplace($Text, 'App ID:', '')
+	$TreeView_Steam_app_ID = StringReplace($TreeView_Steam_app_ID, ' ' , '')
 
-	$New_Icon_steam_app_ID = $TreeView_Steam_app_ID
-	$New_Icon_steam_app_ID_Path = $Icons_DIR & $New_Icon_steam_app_ID & ".jpg"
+	$NR_Applications = IniRead($ApplicationList_INI, "ApplicationList", "NR_Applications", "")
+	If $NR_Applications = "" Then $NR_Applications = 1
+
+	For $LOOP_Preview_Image_1 = 1 To $NR_Applications
+		$ListView_Check_Name_Array = _GUICtrlListView_GetItemTextArray($ListView, $LOOP_Preview_Image_1)
+		If $TreeView_Steam_app_ID = $ListView_Check_Name_Array[3] Then
+			$New_Icon_steam_app_ID_Path = $ListView_Check_Name_Array[4]
+			ExitLoop
+		EndIf
+	Next
 
 	If $New_Icon_steam_app_ID_Path = "" or $New_Icon_steam_app_ID_Path = $Icons_DIR & "" & ".jpg" or Not FileExists($New_Icon_steam_app_ID_Path) Then $New_Icon_steam_app_ID_Path = $gfx & "Icon_Preview.jpg"
 	GUICtrlSetImage($Icon_Preview_Image, $New_Icon_steam_app_ID_Path)
+	$New_Icon_steam_app_ID_Path = ""
 EndFunc
 
 Func _Change_Preview_Icon_Available_Games_ListView()
@@ -2132,6 +1881,126 @@ Func _Change_Preview_Icon_Available_Icons_ListView()
 	GUICtrlSetImage($Available_Icon_Preview_Image_2, $New_Icon_steam_app_ID_Path)
 EndFunc
 
+
+Func _Button_ADD_Icon()
+	$Check_idRadio_ImagePath = IniRead($config_ini, "Settings", "IconPath", "")
+
+	$Icon_Folder = $Icons
+	If $Check_idRadio_ImagePath = "" Then $Icon_Folder = $Icons
+	If $Check_idRadio_ImagePath = "1" Then $Icon_Folder = $Icons_DIR_1
+	If $Check_idRadio_ImagePath = "2" Then $Icon_Folder = $Icons_DIR_2
+	If $Check_idRadio_ImagePath = "3" Then $Icon_Folder = $Icons_DIR_3
+	If $Check_idRadio_ImagePath = "4" Then $Icon_Folder = $Icons_DIR_4
+
+	$ListView_IconsDrop2_Selected_Row_Index = _GUICtrlListView_GetSelectedIndices($Available_Games_ListView)
+	$ListView_IconsDrop2_Selected_Row_Index = Int($ListView_IconsDrop2_Selected_Row_Index)
+	$ListView_IconsDrop2_Selected_Row_Nr = $ListView_IconsDrop2_Selected_Row_Index + 1
+
+	$GameName_IconsDrop2 = _GUICtrlListView_GetItemText($Available_Games_ListView, $ListView_IconsDrop2_Selected_Row_Nr - 1, 0)
+
+	$Drop_IconName = $IconName
+
+
+	If $Drop_IconName <> "" Then
+
+		If $ListView_IconsDrop2_Selected_Row_Index <> "" Then
+
+		$ListView_Item_Array = 0
+		$ListView_Selected_Row_Value = ""
+
+		$ListView_Selected_Row_Index = _GUICtrlListView_GetSelectedIndices($ListView)
+		$ListView_Selected_Row_Index = Int($ListView_Selected_Row_Index)
+		$ListView_Selected_Row_Nr = $ListView_Selected_Row_Index + 1
+
+		$ListView_Item_Array = _GUICtrlListView_GetItemTextArray($ListView, $ListView_Selected_Row_Index)
+		$ListView_Item_Name_ID = $ListView_Item_Array[2] & " - " & $ListView_Item_Array[3]
+
+		For $LOOP_Check_Name_1 = 1 To $ListView_Item_Array[0]
+			$ListView_Check_Name_Array = _GUICtrlListView_GetItemTextArray($ListView, $LOOP_Check_Name_1)
+			If $GameName_IconsDrop2 = $ListView_Check_Name_Array[2] Then
+				$Drop_IconAppKey = $ListView_Check_Name_Array[3]
+				ExitLoop
+			EndIf
+		Next
+
+
+		$VIVE_Home_DB_Path = $VIVE_HOME_VRAPP_Folder & "vive.sqlite"
+		$VIVE_Home_DB_TABLE_Name = "apps"
+
+		Global $hQuery, $aRow, $iRows, $iCols, $aNames
+
+		_SQLite_Startup()
+
+		Global $VIVE_Home_DB = _SQLite_Open($VIVE_Home_DB_Path) ; open Database
+
+		_SQLite_GetTable2d(-1, "SELECT * FROM " & $VIVE_Home_DB_TABLE_Name & ";", $aRow, $iRows, $iCols)
+		If $iRows <> "" Then $iRows = $iRows + 1
+		If $iRows = "" Then $iRows = 1
+
+
+		_SQLite_Query($VIVE_Home_DB, "SELECT ROWID,* FROM " & $VIVE_Home_DB_TABLE_Name & " ORDER BY ROWID;", $hQuery)
+
+
+		_SQLite_FetchNames($hQuery, $aNames)
+		;ConsoleWrite(StringFormat(" %-10s  %-10s  %-10s  %-10s %-10s  %-10s  %-10s  %-10s %-10s  %-10s  %-10s ", $aNames[0], $aNames[1], $aNames[2], $aNames[3], $aNames[4], $aNames[5], $aNames[6], $aNames[7], $aNames[8], $aNames[9]) & @CRLF)
+
+		While _SQLite_FetchData($hQuery, $aRow, False, False) = $SQLITE_OK ; Read Out the next Row
+			;ConsoleWrite(StringFormat(" %-10s  %-10s  %-10s  %-10s %-10s  %-10s  %-10s  %-10s %-10s  %-10s  %-10s ", $aRow[0], $aRow[1], $aRow[2], $aRow[3], $aRow[4], $aRow[5], $aRow[6], $aRow[7], $aRow[8], $aRow[9]) & @CRLF)
+		WEnd
+
+		_SQLite_Query($VIVE_Home_DB, "SELECT ROWID,* FROM " & $VIVE_Home_DB_TABLE_Name & " ORDER BY ROWID;", $hQuery)
+		_SQLite_FetchNames($hQuery, $aNames)
+
+
+		For $NR = 1 To $iRows - 1
+			_SQLite_GetTable2d(-1, "SELECT * FROM " & $VIVE_Home_DB_TABLE_Name & ";", $aRow, $iRows, $iCols)
+			If $iRows <> "" Then $iRows = $iRows + 1
+			If $iRows = "" Then $iRows = 1
+
+			_SQLite_FetchData($hQuery, $aRow, False, False) ; Read Out the next Row
+			;ConsoleWrite(StringFormat(" %-10s  %-10s  %-10s  %-10s %-10s  %-10s  %-10s  %-10s %-10s  %-10s  %-10s ", $aRow[0], $aRow[1], $aRow[2], $aRow[3], $aRow[4], $aRow[5], $aRow[6], $aRow[7], $aRow[8], $aRow[9]) & @CRLF)
+
+			If $Drop_IconAppKey = $aRow[1] Then
+				$Drop_Icon_Path = $Icon_Folder & $Drop_IconName
+				$New_Icon_URL = $aRow[7]
+				$New_Icon_Path = $Drop_Icon_Path
+
+				_SQLite_Exec($VIVE_Home_DB, "REPLACE INTO " & $VIVE_Home_DB_TABLE_Name & "(rowid,app_key,launch_count,last_launched,total_played,is_favorite,installed_time,img_url,img_timestamp,img_file_path,img_fetch_time) VALUES ('" & _
+												$aRow[0] & "','" & $aRow[1] & "','" & $aRow[2] & "','" & $aRow[3] & "','" & $aRow[4] & "','" & $aRow[5] & "','" & $aRow[6] & "','" & $New_Icon_URL & "','" & $aRow[8] & "','" & $New_Icon_Path & "','" & $aRow[10] & "');")
+
+			Else
+				_SQLite_Exec($VIVE_Home_DB, "REPLACE INTO " & $VIVE_Home_DB_TABLE_Name & "(rowid,app_key,launch_count,last_launched,total_played,is_favorite,installed_time,img_url,img_timestamp,img_file_path,img_fetch_time) VALUES ('" & _
+												$aRow[0] & "','" & $aRow[1] & "','" & $aRow[2] & "','" & $aRow[3] & "','" & $aRow[4] & "','" & $aRow[5] & "','" & $aRow[6] & "','" & $aRow[7] & "','" & $aRow[8] & "','" & $aRow[9] & "','" & $aRow[10] & "');")
+			EndIf
+		Next
+
+		_SQLite_QueryFinalize($hQuery)
+		_SQLite_Close($VIVE_HOME_VRAPP_Folder & "vive.sqlite")
+		_SQLite_Shutdown()
+
+		GUICtrlSetImage($Icon_Preview_Image, $New_Icon_Path)
+		GUICtrlSetImage($Available_Icon_Preview_Image_1, $New_Icon_Path)
+
+		$ListView_Item_Array = 0
+		$ListView_Selected_Row_Value = ""
+
+		Sleep(100)
+
+		_Read_from_VIVEHOME_DB()
+
+		Else
+
+			MsgBox(0, "Select Game", "Select Game on the left List View first.")
+
+		EndIf
+
+	Else
+
+		MsgBox(0, "Select Icon", "Select Icon on the right List View first.")
+
+	EndIf
+
+EndFunc
 
 Func _Button_Start_VIVEHOME()
 	$Install_Folder_VIVE_HOME = IniRead($Config_INI, "Folders", "Install_Folder_VIVE_HOME", "")
@@ -2443,6 +2312,29 @@ Func _Checkbox_Load_ShowPlayerOnline_on_StartUp()
 	EndIf
 EndFunc
 
+Func _Checkbox_Overwrite_ApplicationList_INI_on_StartUp()
+	$Status_Checkbox = GUICtrlRead($Checkbox_Overwrite_ApplicationList_INI_on_StartUp)
+
+	If $Status_Checkbox = 1 Then
+		IniWrite($config_ini, "Settings", "Overwrite_ApplicationList_INI_on_StartUp", "true")
+	EndIf
+
+	If $Status_Checkbox = 4 Then
+		IniWrite($config_ini, "Settings", "Overwrite_ApplicationList_INI_on_StartUp", "false")
+	EndIf
+EndFunc
+
+Func _Checkbox_AutoDownload_Missing_Icons()
+	$Status_Checkbox = GUICtrlRead($Checkbox_AutoDownload_Missing_Icons)
+
+	If $Status_Checkbox = 1 Then
+		IniWrite($config_ini, "Settings", "AutoDownload_Missing_Icons", "true")
+	EndIf
+
+	If $Status_Checkbox = 4 Then
+		IniWrite($config_ini, "Settings", "AutoDownload_Missing_Icons", "false")
+	EndIf
+EndFunc
 
 
 Func _idRadio_ImagePath_1()
@@ -2527,6 +2419,7 @@ Func _Button_Download_Icons()
 EndFunc
 
 Func _Read_from_VIVEHOME_DB()
+	$Status_Checkbox_AutoDownload_Missing_Icons = IniRead($config_ini,"Settings", "AutoDownload_Missing_Icons", "")
 	$VIVE_Home_DB_Path = $VIVE_HOME_VRAPP_Folder & "vive.sqlite"
 	$VIVE_Home_DB_TABLE_Name = "apps"
 
@@ -2586,6 +2479,13 @@ Func _Read_from_VIVEHOME_DB()
 
 		$Anzeige_Spalte = $aRow[9]
 		_GUICtrlListView_AddSubItem($ListView, $Ebene_temp, $Anzeige_Spalte, 3)
+		If $Status_Checkbox_AutoDownload_Missing_Icons = "true" Then
+			If Not FileExists($aRow[9]) Then
+				$Missing_Steam_app_Name = $Application_App_Name
+				$Missing_Steam_app_ID = $aRow[1]
+				_Download_Icon_for_SteamID()
+			EndIf
+		EndIf
 
 		$Anzeige_Spalte = $aRow[2]
 		_GUICtrlListView_AddSubItem($ListView, $Ebene_temp, $Anzeige_Spalte, 4)
@@ -2629,21 +2529,46 @@ EndFunc
 Func _Search_Files()
 	Local $s_LocalFolder = $VIVE_HOME_ApplicationList_Folder
 	Local $FileList = _FileListToArray($s_LocalFolder , "*.appinfo" , 1)
+	$Status_Checkbox_Overwrite_ApplicationList_INI_on_StartUp = IniRead($config_ini,"Settings", "Overwrite_ApplicationList_INI_on_StartUp", "")
+	Local $Check_NR_Applications = IniRead($ApplicationList_INI, "ApplicationList", "NR_Applications", "")
 
-	If $FileList <> "" Then
-		For $NR = 1 To $FileList[0]
-			$Application_NR = $NR
-			$FileList_NR = $FileList[0]
-		Global $File_Name = $FileList[$NR]
-		Global $File_Path = $VIVE_HOME_ApplicationList_Folder & $File_Name
-		$ProcessBar_Status = $NR * 100 / $FileList[0]
-		$ProcessBar_Status = $ProcessBar_Status - 15
-		GUICtrlSetData($Anzeige_Fortschrittbalken, $ProcessBar_Status)
-		_ApplicationList_Update()
-		$File_Path =  ""
-		Next
-		Sleep(500)
+	If Not FileExists($ApplicationList_INI) Then $Status_Checkbox_Overwrite_ApplicationList_INI_on_StartUp = "true"
+
+	If $Status_Checkbox_Overwrite_ApplicationList_INI_on_StartUp = "true" Then
+		If $FileList <> "" Then
+			FileDelete($ApplicationList_INI)
+			For $NR = 1 To $FileList[0]
+				$Application_NR = $NR
+				$FileList_NR = $FileList[0]
+			Global $File_Name = $FileList[$NR]
+			Global $File_Path = $VIVE_HOME_ApplicationList_Folder & $File_Name
+			$ProcessBar_Status = $NR * 100 / $FileList[0]
+			$ProcessBar_Status = $ProcessBar_Status - 15
+			GUICtrlSetData($Anzeige_Fortschrittbalken, $ProcessBar_Status)
+			_ApplicationList_Update()
+			$File_Path =  ""
+			Next
+			Sleep(500)
+		EndIf
+	Else
+		If $FileList[0] > $Check_NR_Applications Then
+			If $FileList <> "" Then
+				For $NR = 1 To $FileList[0]
+					$Application_NR = $NR
+					$FileList_NR = $FileList[0]
+				Global $File_Name = $FileList[$NR]
+				Global $File_Path = $VIVE_HOME_ApplicationList_Folder & $File_Name
+				$ProcessBar_Status = $NR * 100 / $FileList[0]
+				$ProcessBar_Status = $ProcessBar_Status - 15
+				GUICtrlSetData($Anzeige_Fortschrittbalken, $ProcessBar_Status)
+				_ApplicationList_Update()
+				$File_Path =  ""
+				Next
+				Sleep(500)
+			EndIf
+		EndIf
 	EndIf
+
 EndFunc
 
 Func _ApplicationList_Update()
@@ -2738,6 +2663,188 @@ Func _ApplicationList_Update()
 	EndIf
 EndFunc
 
+
+Func _Create_TreeView()
+	$NR_Applications = IniRead($ApplicationList_INI, "ApplicationList", "NR_Applications", "")
+	If $NR_Applications = "" Then $NR_Applications = 1
+
+	For $I = 0 To $NR_Applications
+		$AppNR = IniRead($ApplicationList_INI, "Application_" & $I, "NR", "")
+		$AppName = IniRead($ApplicationList_INI, "Application_" & $I, "Name", "")
+		$AppId = IniRead($ApplicationList_INI, "Application_" & $I, "AppId", "")
+		$AppIsFavorite = IniRead($ApplicationList_INI, "Application_" & $AppId, "IsFavorite", "")
+		$App_PO_right_now = IniRead($ApplicationList_INI, "Application_" & $I, "right_now", "")
+		$App_PO_24h_peak = IniRead($ApplicationList_INI, "Application_" & $I, "24h_peak", "")
+		$App_PO_all_time_peak = IniRead($ApplicationList_INI, "Application_" & $I, "all_time_peak", "")
+
+		If $AppName <> "" Then Global $id_CreateTreeViewItem = GUICtrlCreateTreeViewItem($AppName, $idTreeView)
+		GUICtrlSetOnEvent($id_CreateTreeViewItem, "_Change_Preview_Icon_Desktop_APP")
+
+			If $AppNR <> "" Then $id_TreeViewItem_AppKey = GUICtrlCreateTreeViewItem("App NR:" & "               " & $AppNR, $id_CreateTreeViewItem)
+			If $AppNR <> "" Then GUICtrlSetOnEvent($id_TreeViewItem_AppKey, "_Create_HTMLView_GUI")
+			If $AppName <> "" Then $id_TreeViewItem_AppNameAppName = GUICtrlCreateTreeViewItem("App Name:" & "         " & $AppName, $id_CreateTreeViewItem)
+			If $AppName <> "" Then GUICtrlSetOnEvent($id_TreeViewItem_AppNameAppName, "_Create_HTMLView_GUI")
+			If $AppId <> "" Then $id_TreeViewItem_AppId = GUICtrlCreateTreeViewItem("App ID:" & "                " & $AppId, $id_CreateTreeViewItem)
+			If $AppId <> "" Then GUICtrlSetOnEvent($id_TreeViewItem_AppId, "_Create_HTMLView_GUI")
+			If $AppIsFavorite <> "" Then $id_TreeViewItem_AppIsFavorite = GUICtrlCreateTreeViewItem("App Is Favorite:" & "  " & $AppIsFavorite, $id_CreateTreeViewItem)
+			If $AppIsFavorite <> "" Then GUICtrlSetOnEvent($id_TreeViewItem_AppIsFavorite, "_Create_HTMLView_GUI")
+			If $AppIsFavorite = "" Then $id_TreeViewItem_AppIsFavorite = GUICtrlCreateTreeViewItem("App Is Favorite:" & "  " & "false", $id_CreateTreeViewItem)
+			If $AppIsFavorite = "" Then GUICtrlSetOnEvent($id_TreeViewItem_AppIsFavorite, "_Create_HTMLView_GUI")
+			If $App_PO_right_now <> "" Then $id_TreeViewItem_App_PO_right_now = GUICtrlCreateTreeViewItem("Players Online right now:" & "       " & $App_PO_right_now, $id_CreateTreeViewItem)
+			If $App_PO_right_now <> "" Then GUICtrlSetOnEvent($id_TreeViewItem_App_PO_right_now, "_Create_HTMLView_GUI")
+			If $App_PO_24h_peak <> "" Then $id_TreeViewItem_App_PO_24h_peak = GUICtrlCreateTreeViewItem("Players Online 24h peak:" & "         " & $App_PO_24h_peak, $id_CreateTreeViewItem)
+			If $App_PO_24h_peak <> "" Then GUICtrlSetOnEvent($id_TreeViewItem_App_PO_24h_peak, "_Create_HTMLView_GUI")
+			If $App_PO_all_time_peak <> "" Then $id_TreeViewItem_App_PO_all_time_peak = GUICtrlCreateTreeViewItem("Players Online all time peak:" & "  " & $App_PO_all_time_peak, $id_CreateTreeViewItem)
+			If $App_PO_all_time_peak <> "" Then GUICtrlSetOnEvent($id_TreeViewItem_App_PO_all_time_peak, "_Create_HTMLView_GUI")
+	Next
+EndFunc
+
+Func _Create_HTMLView_GUI()
+	Local $Button_Exit_HTML_GUI, $TreeView_Steam_app_NR, $TreeView_Steam_app_Name, $TreeView_Steam_app_ID, $TreeView_Steam_app_IS_Favorite
+	Local $TreeView_Steam_app_PO_right_now, $TreeView_Steam_app_PO_24h_peak, $TreeView_Steam_app_PO_all_time_peak, $Text_SplitNR
+	Local $Handle_2, $Text_2
+
+	Local $ID = GUICtrlRead($idTreeView)
+	$ID = $ID
+	Local $Handle = _GUICtrlTreeView_GetItemHandle($idTreeView, $ID)
+	Local $Text = _GUICtrlTreeView_GetText($idTreeView, $Handle)
+
+	$Text_SplitNR = StringInStr($Text, ':')
+	$Text = StringLeft($Text, $Text_SplitNR)
+
+	If $Text = "App NR:" Then $ID = $ID + 2
+	If $Text = "App Name:" Then $ID = $ID + 1
+	If $Text = "App ID" Then $ID = $ID
+	If $Text = "App Is Favorite:" Then $ID = $ID - 1
+	If $Text = "Players Online right now:" Then $ID = $ID - 2
+	If $Text = "Players Online 24h peak:" Then $ID = $ID - 3
+	If $Text = "Players Online all time peak:" Then $ID = $ID - 4
+
+	$Handle_2 = _GUICtrlTreeView_GetItemHandle($idTreeView, $ID)
+	$Text_2 = _GUICtrlTreeView_GetText($idTreeView, $Handle_2)
+
+	$TreeView_Steam_app_ID = StringReplace($Text_2, 'App ID:', '')
+	$TreeView_Steam_app_ID = StringReplace($TreeView_Steam_app_ID, ' ', '')
+	$TreeView_Game_ID = StringReplace($TreeView_Steam_app_ID, 'steam.app.' , '')
+	$TreeView_Steam_app_Name = IniRead($ApplicationList_INI, "Application_" & $TreeView_Steam_app_ID, "Name", "")
+
+	$oIE = ObjCreate("Shell.Explorer.2")
+
+	$HTML_GUI = GUICreate($TreeView_Steam_app_Name & " - " & $TreeView_Game_ID, 980, 600, (@DesktopWidth - 980) / 2, (@DesktopHeight - 600) / 2, BitOR($WS_MINIMIZEBOX, $WS_CAPTION, $WS_POPUP, $WS_EX_CLIENTEDGE, $WS_EX_TOOLWINDOW))
+	GUICtrlCreateObj($oIE, 0, 0, 979, 550)
+
+	Global $Button_Exit_HTML_GUI = GUICtrlCreateButton("Exit", 940, 560, 35, 35, $BS_BITMAP)
+	GUICtrlSetOnEvent(- 1, "_Button_Exit_HTML_GUI")
+	_GUICtrlButton_SetImage(- 1, $gfx & "Exit2.bmp")
+	GuiCtrlSetTip(-1, "Closes HTML GUI.")
+
+	$IE_Adresse = "https://steamdb.info/app/" & $TreeView_Game_ID & "/graphs/"
+	$oIE.navigate($IE_Adresse)
+
+	GUISetState()
+	$TreeView_Game_ID = ""
+EndFunc
+
+Func _Button_Exit_HTML_GUI()
+	GUIDelete($HTML_GUI)
+EndFunc
+
+
+Func _Create_ListViews_TAB_3()
+	; Create arrays and fill ListViews
+	$NR_Shorcuts = IniRead($Shortcuts_INI, "NR_Shorcuts", "NR", "")
+	$GameName = _GUICtrlListView_GetItemTextArray($listview)
+	$NR_GameNames = IniRead($ApplicationList_INI, "ApplicationList", "NR_Applications", "")
+
+	$FileList_IconsFolder_1 = _FileListToArray($Icons, "*.jpg")
+
+	If $FileList_IconsFolder_1 <> 0 Then
+		$NR_Icons = $FileList_IconsFolder_1[0]
+	Else
+		$NR_Icons = 0
+	EndIf
+
+	Global $Content_Current_Shorcuts_ListView[$NR_Icons], $Content_Available_Games_ListView[$NR_GameNames]
+	Global $Content_Current_Groups_ListView[$NR_Shorcuts], $Content_Available_Groups_ListView[10], $Content_IconsDrop2_ListView[1]
+
+	For $LOOP_Content_1 = 1 To $NR_GameNames ; - 1
+		$GameName = IniRead($ApplicationList_INI, "Application_" & $LOOP_Content_1, "Name", "")
+		$Available_GameName = $GameName
+
+		If $Available_GameName <> "" Then
+			$Content_Available_Games_ListView[$LOOP_Content_1 - 1] = $Available_GameName
+			$Available_Games_ListViewItem = GUICtrlCreateListViewItem($Available_GameName, $Available_Games_ListView)
+			GUICtrlSetOnEvent($Available_Games_ListViewItem, "_ClickOn_Current_Available_Games_ListView")
+
+			$ApplicationList_AppId = IniRead($ApplicationList_INI, "Application_" & $LOOP_Content_1, "AppId", "")
+			$ApplicationList_IsFavorite = IniRead($ApplicationList_INI, "Application_" & $ApplicationList_AppId, "IsFavorite", "")
+			If $ApplicationList_IsFavorite = "true" Then _GUICtrlListView_SetItemChecked($Available_Games_ListView, $LOOP_Content_1 - 1)
+		EndIf
+	Next
+
+	For $LOOP_Content_2 = 1 To $NR_Icons
+		$WidgetName = $FileList_IconsFolder_1[$LOOP_Content_2]
+
+		If $WidgetName <> "" Then
+			$Content_Current_Shorcuts_ListView[$LOOP_Content_2 - 1] = $WidgetName
+			$Current_Shortcuts_ListViewItem = GUICtrlCreateListViewItem($WidgetName, $Current_Shortcuts_ListView)
+			GUICtrlSetOnEvent($Current_Shortcuts_ListViewItem, "_ClickOn_Current_Shortcuts_ListView")
+		EndIf
+	Next
+
+	For $LOOP_Content_3 = 1 To $NR_Shorcuts ;- 1
+		$GroupWidgetName = IniRead($Shortcuts_INI, "Shortcut_" & $LOOP_Content_3, "WidgetName", "")
+		$GroupWidgetUID = IniRead($Shortcuts_INI, "Shortcut_" & $LOOP_Content_3, "WidgetUID", "")
+		$currentFilePath = IniRead($Shortcuts_INI, "Shortcut_" & $LOOP_Content_3, "currentFilePath", "")
+
+		If $GroupWidgetUID = "htc_widget_photo_frame" Then
+			If $GroupWidgetName = "" Then
+				$GroupWidgetName = $currentFilePath
+
+				$NR_Name_from_Path = StringInStr($GroupWidgetName, "\\", 0, -1)
+				$Name_from_Path_1 = StringTrimLeft($GroupWidgetName, $NR_Name_from_Path + 1)
+
+				$GroupName_Check = StringInStr($GroupWidgetName, "Group_", 0, -1)
+
+				If $GroupName_Check <> 0 Then
+					$Name_from_Path_2 = StringReplace($Name_from_Path_1, "Group_", "")
+					$Name_from_Path_3 = StringReplace($Name_from_Path_2, ".jpg", "")
+					$Name_from_Path = $Name_from_Path_3
+					$GroupWidgetName = $Name_from_Path
+				EndIf
+
+			EndIf
+
+			$Content_Current_Groups_ListView[$LOOP_Content_3 - 1] = $GroupName
+			GUICtrlCreateListViewItem($GroupWidgetName, $Current_Groups_ListView)
+		EndIf
+	Next
+
+	For $LOOP_Content_4 = 1 To 10
+		$GroupName = IniRead($Config_INI, "Groups", "Group_" & $LOOP_Content_4, "")
+		$Content_Available_Groups_ListView[$LOOP_Content_4 - 1] = $GroupName
+		$Available_Groups_ListViewItem = GUICtrlCreateListViewItem($GroupName, $Available_Groups_ListView)
+		GUICtrlSetOnEvent($Available_Groups_ListViewItem, "_ClickOn_Available_Groups_ListView")
+	Next
+
+	For $LOOP_Content_5 = 1 To 1
+		$GroupName = ""
+		$Content_IconsDrop2_ListView[0] = $GroupName
+		GUICtrlCreateListViewItem($GroupName, $IconsDrop2_ListView)
+	Next
+
+;$ProcessBar_Status = 100
+;GUICtrlSetData($Anzeige_Fortschrittbalken, $ProcessBar_Status)
+
+; Initiate ListViews and set differing external drag/drop states
+$iLV_Current_Shortcuts_ListView = _GUIListViewEx_Init($Current_Shortcuts_ListView, $Content_Current_Shorcuts_ListView, 1, 0, True, 128 + 256)
+$iLV_Current_Groups_ListView = _GUIListViewEx_Init($Current_Groups_ListView, $Content_Current_Groups_ListView, 0, 0, True)
+$iLV_Available_Groups_ListView = _GUIListViewEx_Init($Available_Groups_ListView, $Content_Available_Groups_ListView, 0, 0, True, 128 + 256)
+$iLV_IconsDrop2_ListView = _GUIListViewEx_Init($IconsDrop2_ListView, $Content_IconsDrop2_ListView, 0, 0, True)
+
+EndFunc
+
+
 Func _Get_ADD_PlayersOnline_DATA()
 	Global $Check_AppId = $Write_AppId
 	Global $Steam_AppId = StringReplace($Check_AppId, 'steam.app.', '')
@@ -2796,18 +2903,33 @@ Func _Download_Icons()
 EndFunc
 
 Func _Download_Icon_for_SteamID()
-	$ApplicationName = $Steam_app_Value
-	$Application_ID = $Steam_app_ID
-	$Download_Icon_path_jpg = $Icons_DIR & "steam.app." & $Application_ID & '.jpg'
-	$Download_Icon_path_png = $Icons_DIR & "steam.app." & $Application_ID & '.png'
-	$ImagePath_Value = IniRead($Config_INI, "Settings", "ImagePath", "")
-	If $ImagePath_Value = "" Then $ImagePath_Value = 2
-	$Steam_Check = StringLeft($ApplicationName, 5)
+	$Icons_DIR_1 = $Install_Folder_VIVE_Software & "Updater\App\Dashboard\win32\header_image\"
+	$Icons_DIR_2 = $Install_DIR & "Icons\"
+	$Icons_DIR_3 = IniRead($Config_INI, "Folders", "Custom_Icon_Folder_1", "")
+	$Icons_DIR_4 = IniRead($Config_INI, "Folders", "Custom_Icon_Folder_2", "")
+
+	$Check_idRadio_ImagePath = IniRead($config_ini, "Settings", "IconPath", "")
+	If $Check_idRadio_ImagePath = "" Then IniWrite($config_ini, "Settings", "IconPath", "2")
+	If $Check_idRadio_ImagePath = "" Then $Check_idRadio_ImagePath = 2
+
+	If $Check_idRadio_ImagePath = "" Then $Icons_DIR = $Icons
+	If $Check_idRadio_ImagePath = "1" Then $Icons_DIR = $Icons_DIR_1
+	If $Check_idRadio_ImagePath = "2" Then $Icons_DIR = $Icons_DIR_2
+	If $Check_idRadio_ImagePath = "3" Then $Icons_DIR = $Icons_DIR_3
+	If $Check_idRadio_ImagePath = "4" Then $Icons_DIR = $Icons_DIR_4
+
+	$ApplicationName = $Missing_Steam_app_Name
+	$Application_ID = $Missing_Steam_app_ID
+	$Application_IDNR = StringReplace($Application_ID, 'steam.app.', '')
+
+	$Download_Icon_path_jpg = $Icons_DIR & "steam.app." & $Application_IDNR & '.jpg'
+	If $Check_idRadio_ImagePath = "1" Then $Download_Icon_path_jpg = $Icons_DIR_1 & $Application_IDNR & '_header' & '.jpg'
+
+	$Steam_Check = StringLeft($Application_ID, 5)
 
 	If $Steam_Check = "steam" Then
-		$URL = 'http://cdn.akamai.steamstatic.com/steam/apps/' & $Application_ID & '/header.jpg'
+		$URL = 'http://cdn.akamai.steamstatic.com/steam/apps/' & $Application_IDNR & '/header.jpg'
 		InetGet($URL, $Download_Icon_path_jpg, 16, 0)
-		If $ImagePath_Value = 3 Then $download = InetGet($URL, $Download_Icon_path_png, 16, 0)
 	EndIf
 EndFunc
 

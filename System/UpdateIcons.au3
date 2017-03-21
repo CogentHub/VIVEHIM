@@ -1,5 +1,5 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Icon=..\..\..\coding\PCDSG_1.31\ICONS\DataUpdate.ico
+#AutoIt3Wrapper_Icon=..\..\PCDSG_1.3\ICONS\DataUpdate.ico
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
 ;#include<IE.au3>

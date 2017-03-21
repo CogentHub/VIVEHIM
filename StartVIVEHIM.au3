@@ -1,6 +1,3 @@
-#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Icon=..\..\coding\PCDSG_1.31\ICONS\InfoWindow.ico
-#EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
 $config_ini = @ScriptDir & "\System\" & "config.ini"
 
