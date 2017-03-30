@@ -22,6 +22,9 @@ If $Check_IconPath = "1" Then $Icons = $Icons_DIR_1
 If $Check_IconPath = "2" Then $Icons = $Icons_DIR_2
 If $Check_IconPath = "3" Then $Icons = $Icons_DIR_3
 If $Check_IconPath = "4" Then $Icons = $Icons_DIR_4
+Global $Check_Load_ShowPlayerOnline_on_StartUp = IniRead($config_ini,"Settings", "Load_ShowPlayerOnline_on_StartUp", "")
+Global $Check_Checkbox_FB_Check = IniRead($config_ini,"Settings", "FB_Check", "")
+Global $Check_Use_VIVEHOME_lnk = IniRead($config_ini,"TEMP", "Use_VIVEHOME_lnk", "")
 
 Global $NR_Applications = IniRead($ApplicationList_INI, "ApplicationList", "NR_Applications", "")
 
@@ -31,6 +34,9 @@ Global $Check_Filename_3, $Check_Filename, $hBMPBuff, $hGraphic, $hPen, $GUI_RUN
 Global $Value_Sleep_1 = IniRead($config_ini, "Settings", "Value_ShowPlayerOnline", "")
 
 Do
+	$Check_Load_ShowPlayerOnline_on_StartUp = IniRead($config_ini,"Settings", "Load_ShowPlayerOnline_on_StartUp", "")
+	$Check_Checkbox_FB_Check = IniRead($config_ini,"Settings", "FB_Check", "")
+	$Check_Use_VIVEHOME_lnk = IniRead($config_ini,"TEMP", "Use_VIVEHOME_lnk", "")
 
 	_Get_ADD_DATA()
 
@@ -44,6 +50,10 @@ Do
 	Else
 		$SteamVR_Status = "false"
 	EndIf
+
+	If $Check_Load_ShowPlayerOnline_on_StartUp = "true" Then Exit
+	If $Check_Checkbox_FB_Check = "true" Then Exit
+	If $Check_Use_VIVEHOME_lnk = "true" Then Exit
 
 Until $SteamVR_Status = "false"
 
