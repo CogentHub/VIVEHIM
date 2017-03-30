@@ -3265,7 +3265,6 @@ Func _Button_AddIcons()
 		EndIf
 
 		$Check_SteamName = IniRead($ApplicationList_INI, "Application_" & $aRow[1], "Name", "")
-		MsgBox(0, "", $Check_SteamName)
 		If $Check_SteamName = "1_ViveHome" Then
 			$New_Icon_URL = ""
 			$New_Icon_Path = $Icons_DIR_2 & $Check_SteamName & ".jpg"
