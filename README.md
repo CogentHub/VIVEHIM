@@ -1,6 +1,8 @@
 # VIVEHIM
 VIVE HOME Icon Manager
 
+[StartUp Guide](VIVEHIM_StartUp_Guide.pdf)
+
 
 # Features:
 
