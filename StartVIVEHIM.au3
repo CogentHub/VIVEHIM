@@ -26,7 +26,6 @@ Func _Button_VIVE_HOME_VRAPP_delete()
 
 	FileDelete($TEMP_2)
 	FileDelete($TEMP_3)
-	;ShellExecute($VIVE_HOME_VRAPP_Folder)
 
 	IniWrite($config_ini, "TEMP", "TEMP_1", "")
 	IniWrite($config_ini, "TEMP", "TEMP_2", "")

@@ -1,5 +1,5 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Icon=..\..\PCDSG_1.3\ICONS\AutoDataUpdate.ico
+#AutoIt3Wrapper_Icon=..\GUI_ICONS\AutoDataUpdate.ico
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 #include <Inet.au3>
 #include "_GDIPlus_WTOB.au3"
@@ -34,9 +34,9 @@ Global $Check_Filename_3, $Check_Filename, $hBMPBuff, $hGraphic, $hPen, $GUI_RUN
 Global $Value_Sleep_1 = IniRead($config_ini, "Settings", "Value_ShowPlayerOnline", "")
 
 Do
-	$Check_Load_ShowPlayerOnline_on_StartUp = IniRead($config_ini,"Settings", "Load_ShowPlayerOnline_on_StartUp", "")
-	$Check_Checkbox_FB_Check = IniRead($config_ini,"Settings", "FB_Check", "")
-	$Check_Use_VIVEHOME_lnk = IniRead($config_ini,"TEMP", "Use_VIVEHOME_lnk", "")
+	;$Check_Load_ShowPlayerOnline_on_StartUp = IniRead($config_ini, "Settings", "Load_ShowPlayerOnline_on_StartUp", "")
+	;$Check_Checkbox_FB_Check = IniRead($config_ini, "Settings", "FB_Check", "")
+	;$Check_Use_VIVEHOME_lnk = IniRead($config_ini, "TEMP", "Use_VIVEHOME_lnk", "")
 
 	_Get_ADD_DATA()
 

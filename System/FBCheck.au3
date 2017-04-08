@@ -1,13 +1,16 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Icon=..\..\PCDSG_1.31\ICONS\AutoDataUpdate.ico
+#AutoIt3Wrapper_Icon=..\GUI_ICONS\PC_Server_starten.ico
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 #include <MsgBoxConstants.au3>
 #include <GUIConstantsEx.au3>
 #include <WindowsConstants.au3>
 #include <Array.au3>
+#include <GuiButton.au3>
+
+Opt("GUIOnEventMode", 1)
 
 Global $SteamVR_Status, $Title_1, $Title_2, $Handle_1, $Handle_2, $Title_Array_1, $Title_Array_2, $Handle_Array_1, $Handle_Array_2, $NR_Handle_1, $NR_Handle_2
-Global $GameStarted, $LOOP_VIVEHOMECheck
+Global $GameStarted, $LOOP_VIVEHOMECheck, $OldWindowExists
 
 Global $config_ini = @ScriptDir & "\config.ini"
 Global $Install_DIR = IniRead($config_ini, "Folders", "Install_Folder", "")
@@ -15,38 +18,89 @@ Global $System_DIR = $Install_DIR & "System\"
 Global $Install_Folder_VIVE_HOME = IniRead($Config_INI, "Folders", "Install_Folder_VIVE_HOME", "")
 Global $VIVE_HOME_EXE = $Install_Folder_VIVE_HOME & "ViveHome.exe"
 Global $Status_Checkbox_Minimize_OVRS = IniRead($config_ini,"Settings", "Minimize_OVRS", "")
+Global $gfx = @ScriptDir & "\" & "gfx\"
+
+Global $LimeGreen = "0x32CD32"
+Global $Blue = "0x00BFFF"
+Global $Yellow = "0xFFFF00"
+
+Global $USE_FB_GUI = IniRead($Config_INI, "Settings", "USE_FB_GUI", "")
+
+$DesktopWidth = @DesktopWidth / 2
+$DesktopHeight = @DesktopHeight
+
+$Width = $DesktopWidth - 118
+$Height = $DesktopHeight - 5
+
+$X = $Width
+$Y = $DesktopHeight - $Height
 
 $font_arial = "arial"
 
 $SteamVR_Status = "true"
 
+Local Const $PG_WS_POPUP = 0x80000000
+Local Const $PG_WS_DLGFRAME = 0x00400000
+
+$font_arial = "arial"
+
+If $USE_FB_GUI = "true" Then
+	$GUI = GUICreate("Download and Fix Missing Icons", 230, 35, $X, $Y, BitOR($PG_WS_DLGFRAME, $PG_WS_POPUP))  ; $WS_EX_TOPMOST
+	GUISetIcon(@AutoItExe, -2, $GUI)
+	GUISetBkColor($Yellow)
+
+	$GUI_Label = GUICtrlCreateLabel("...Loading...", 50, 7, 127, 20)
+	GUICtrlSetFont(-1, 12, 600, 2, $font_arial, 2)
+	GUISetBkColor($Yellow)
+
+	Global $Button_Restart = GUICtrlCreateButton("Restart", 0, 0, 35, 35, $BS_BITMAP)
+	_GUICtrlButton_SetImage($Button_Restart, $gfx & "Restart.bmp")
+	GUICtrlSetOnEvent($Button_Restart, "_Restart_FBCheck")
+
+	Global $Button_Exit = GUICtrlCreateButton("Exit", 195, 0, 35, 35, $BS_BITMAP)
+	_GUICtrlButton_SetImage($Button_Exit, $gfx & "Exit.bmp")
+	GUICtrlSetOnEvent($Button_Exit, "_Close_CurrentRunning")
+
+	GUISetState(@SW_SHOW, $GUI)
+	WinActivate("Vive Home")
+EndIf
+
+_Check_Open_Windows_1()
 
 Do
+	If $USE_FB_GUI = "true" Then
+		GUICtrlSetData($GUI_Label, "...Loading...")
+		GUISetBkColor($Yellow)
+	EndIf
+
 	$Status_Checkbox_Minimize_OVRS = IniRead($config_ini,"Settings", "Minimize_OVRS", "")
 	If $Status_Checkbox_Minimize_OVRS = "true" Then
 		If WinExists("Oculus") Then WinSetState("Oculus", "", @SW_MINIMIZE)
 	EndIf
 
 	If WinExists("SteamVR-Status") Then
-		_Check_Open_Windows_1()
-
+		;_Check_Open_Windows_1()
 		$VIVEHOMECheck = "false"
 		For $LOOP_VIVEHOMECheck = 0 To $NR_Handle_1
-			If $Title_Array_1[$LOOP_VIVEHOMECheck] = "Vive Home" Then
+			If $Title_Array_1[$LOOP_VIVEHOMECheck] = "Vive Home" or $Title_Array_1[$LOOP_VIVEHOMECheck] = "Vive" Then
 				$VIVEHOMECheck = "true"
 			EndIf
 		Next
 
 		If $VIVEHOMECheck = "true" Then
+			If $USE_FB_GUI = "true" Then
+				GUICtrlSetData($GUI_Label, "Vive Home")
+				GUISetBkColor($Blue)
+			EndIf
 			Do
 				$GameStarted = ""
-				_Check_Open_Windows_1()
+				;_Check_Open_Windows_1()
 				Sleep(5000)
 				If $Status_Checkbox_Minimize_OVRS = "true" Then
 					If WinExists("Oculus") Then WinSetState("Oculus", "", @SW_MINIMIZE)
 				EndIf
 			Until Not WinExists("Vive Home")
-			Sleep(1000)
+			Sleep(3000)
 		Else
 			Sleep(5000)
 		EndIf
@@ -55,10 +109,22 @@ Do
 
 		If $NR_Handle_1 <> $NR_Handle_2 Then
 			_Check_Windows_Title()
+			$OldWindowExists = "false"
+			For $i = 1 To $NR_Handle_1
+				If $Title_Array_1[$i] = $GameStarted Then
+					$OldWindowExists = "true"
+					;MsgBox(0, "", $OldWindowExists & @CRLF & @CRLF & $GameStarted & " = " & $Title_Array_1[$i])
+					;_ArrayDisplay($Title_Array_1)
+				EndIf
+			Next
 		EndIf
 
-		If $GameStarted <> "" and $GameStarted <> "Oculus" and $GameStarted <> "Vive Home" and $GameStarted <> "SteamVR-Status" and $GameStarted <> "SteamVR-Running..." Then
+		If $GameStarted <> "" and $GameStarted <> "Oculus" and $GameStarted <> "Vive Home" and $GameStarted <> "SteamVR-Status" and $GameStarted <> "SteamVR Status" and $GameStarted <> "SteamVR-Running..." and $OldWindowExists <> "true" and $GameStarted <> "Download and Fix Missing Icons" Then
 			Do
+				If $USE_FB_GUI = "true" Then
+					GUICtrlSetData($GUI_Label, $GameStarted)
+					GUISetBkColor($LimeGreen)
+				EndIf
 				If $Status_Checkbox_Minimize_OVRS = "true" Then
 					If WinExists("Oculus") Then WinSetState("Oculus", "", @SW_MINIMIZE)
 				EndIf
@@ -73,10 +139,10 @@ Do
 					ShellExecute($System_DIR & "1_ViveHome.au3", "", $System_DIR)
 				EndIf
 				Sleep(500)
-				If FileExists(@ScriptDir & "\FBCheck.exe") Then
-					ShellExecute(@ScriptDir & "\FBCheck.exe", "", $System_DIR)
+				If FileExists($System_DIR & "FBCheck.exe") Then
+					ShellExecute($System_DIR & "FBCheck.exe", "", $System_DIR)
 				Else
-					ShellExecute(@ScriptDir & "\FBCheck.au3", "", $System_DIR)
+					ShellExecute($System_DIR & "FBCheck.au3", "", $System_DIR)
 				EndIf
 				Exit
 			EndIf
@@ -86,15 +152,19 @@ Do
 		$SteamVR_Status = "false"
 	EndIf
 
-	$Title_1 = ""
-	$Handle_1 = ""
-	$Title_2 = ""
-	$Handle_2 = ""
-	$NR_Handle_1 = 0
-	$NR_Handle_2 = 0
-	$Title_Array_1 = 0
-	$Title_Array_2 = 0
+	;$Title_1 = ""
+	;$Handle_1 = ""
+	;$Title_2 = ""
+	;$Handle_2 = ""
+	;$NR_Handle_1 = 0
+	;$NR_Handle_2 = 0
+	;$Title_Array_1 = 0
+	;$Title_Array_2 = 0
 
+	If $USE_FB_GUI = "true" Then
+		GUICtrlSetData($GUI_Label, $GameStarted & "...Loading...")
+		GUISetBkColor($Yellow)
+	EndIf
 Until $SteamVR_Status = "false"
 
 
@@ -148,4 +218,24 @@ Func _Check_Windows_Title()
 	WinActivate($WinTitle)
 	$GameStarted = $WinTitle
 EndFunc
+
+Func _Restart_FBCheck()
+	If FileExists($System_DIR & "FBCheck.exe") Then
+		ShellExecute($System_DIR & "FBCheck.exe", "", $System_DIR)
+	Else
+		ShellExecute($System_DIR & "FBCheck.au3", "", $System_DIR)
+	EndIf
+	If WinExists("Vive Home") Then WinActivate("Vive Home")
+	If WinExists($GameStarted) Then WinActivate($GameStarted)
+	Exit
+EndFunc
+
+Func _Close_CurrentRunning()
+	WinClose($GameStarted)
+	_Restart_FBCheck()
+	If WinExists("Vive Home") Then WinActivate("Vive Home")
+	Exit
+EndFunc
+
+
 

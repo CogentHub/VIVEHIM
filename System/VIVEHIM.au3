@@ -1,5 +1,5 @@
 #Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Icon=..\..\..\coding\PCDSG_1.31\ICONS\InfoWindow.ico
+#AutoIt3Wrapper_Icon=..\GUI_ICONS\InfoWindow.ico
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 #include <GuiToolbar.au3>
 #include <GuiButton.au3>
@@ -144,13 +144,16 @@ Global $Status_Checkbox_FB_Check, $Checkbox_FB_Check, $Check_Checkbox_FB_Check, 
 Global $GetItemTextString, $GetItem_Name, $GetItem_AppId, $GetItem_IsFavorite, $GetItem_IconPath, $GetItem_NR, $ApplicationNR_TEMP
 Global $Check_GameName, $LOOP_Checkbox_1, $Button_Save_Favorites, $Time, $Status_Checkbox_Use_VIVEHOME_lnk, $Checkbox_Use_VIVEHOME_lnk
 Global $OVR_Service_Check, $OVR_Service_Check_pic, $Button_OVR_Service_Start, $Button_OVR_Service_Stop, $Status_Checkbox_StopOVRS_on_StartUp, $Checkbox_StopOVRS_on_StartUp
-Global $Status_Checkbox_Minimize_OVRS, $Checkbox_Minimize_OVRS, $NR_TEMP, $Check_SteamName
+Global $Status_Checkbox_Minimize_OVRS, $Checkbox_Minimize_OVRS, $NR_TEMP, $Check_SteamName, $NR_ProcessBar, $ProcessBar_Status_new
+Global $ListView_DB_Selected_Row_Index, $ListView_DB_Selected_Row_Nr, $GameName_DB_Click, $GameAppId_DB_Click
+Global $Check_AppId, $sHTML, $sStringReplace, $Check_Steam_AppId, $Button_SaveFavorites_TAB1, $GameName_ListView, $GameAppId_ListView
+Global $Status_Checkbox_USE_FB_GUI, $Checkbox_USE_FB_GUI, $USE_FB_GUI_Image
 
 Local $hQuery, $aRow, $iRows, $iCols, $aNames
 #endregion
 
 #Region Declare Variables/Const 1
-Global $Version = "0.58"
+Global $Version = "0.62"
 Global $config_ini = @ScriptDir & "\config.ini"
 $Install_DIR_StringReplace = StringReplace($config_ini, 'System\config.ini', '')
 $Install_DIR = $Install_DIR_StringReplace
@@ -385,8 +388,6 @@ GuiCtrlSetTip(-1, "Closes VIVEHIM.")
 
 _GUICtrlStatusBar_SetText($Statusbar, "LOADING, please wait..." & @TAB & @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
 
-;_Search_Files()
-
 ; TABS ERSTELLEN
 $TAB_NR = GUICtrlCreateTab(2, 50, 1095, 575, BitOR($TCS_BUTTONS, $TCS_FLATBUTTONS))
 GUICtrlSetOnEvent($TAB_NR, "_Tab")
@@ -394,7 +395,7 @@ GUICtrlSetOnEvent($TAB_NR, "_Tab")
 $TAB_NR_1 = GUICtrlCreateTab(70, 105, 420, 380)
 $TAB_NR_1_1 = GUICtrlCreateTabItem($Name_TAB_1)
 Global $listview = GUICtrlCreateListView("", 0, 70, 644, 404, BitOR($LVS_SHOWSELALWAYS, $LVS_NOSORTHEADER, $LVS_REPORT), $TAB_NR_1)
-_GUICtrlListView_SetExtendedListViewStyle($listview, BitOR($LVS_EX_FULLROWSELECT, $LVS_EX_GRIDLINES, $LVS_EX_DOUBLEBUFFER, $iStylesEx)) ; $LVS_EX_CHECKBOXES
+_GUICtrlListView_SetExtendedListViewStyle($listview, BitOR($LVS_EX_FULLROWSELECT, $LVS_EX_GRIDLINES, $LVS_EX_DOUBLEBUFFER, $iStylesEx, $LVS_EX_CHECKBOXES))
 
 ; Load images
 $ListView_Favorite_Image = _GUIImageList_Create(16,16)
@@ -403,9 +404,9 @@ _GUIImageList_AddBitmap($ListView_Favorite_Image, $gfx & "Favorite_2.bmp")
 _GUICtrlListView_SetImageList($listview, $ListView_Favorite_Image, 1)
 
 ; Add columns
-_GUICtrlListView_AddColumn($listview, "NR.", 45)
+_GUICtrlListView_AddColumn($listview, "NR.", 53)
 _GUICtrlListView_AddColumn($listview, "Name", 135)
-_GUICtrlListView_AddColumn($listview, "App Key", 150)
+_GUICtrlListView_AddColumn($listview, "App Key", 142)
 _GUICtrlListView_AddColumn($listview, "Online", 50)
 _GUICtrlListView_AddColumn($listview, "Icon File Path", 240)
 _GUICtrlListView_AddColumn($listview, "Launch Count", 88)
@@ -421,12 +422,16 @@ $Button_StartGame = GUICtrlCreateButton("Add Icons", 5, 480, 87, 35, $BS_BITMAP)
 _GUICtrlButton_SetImage($Button_StartGame, $gfx & "StartGame.bmp")
 GuiCtrlSetTip(-1, "Starts selected SteamVR Game.")
 
+$Button_SaveFavorites_TAB1 = GUICtrlCreateButton("Save Favorites", 100, 480, 87, 35, $BS_BITMAP)
+_GUICtrlButton_SetImage($Button_SaveFavorites_TAB1, $gfx & "SaveFavorites.bmp")
+GuiCtrlSetTip(-1, "Saves Favorites.")
+
 GUICtrlCreateTabItem("")
 
 
 $TAB_NR_2 = GUICtrlCreateTabItem($Name_TAB_2)
 
-Local $Kopfzeile_Explorerbaum = GUICtrlCreateListView("", 0, 70, 650, 25, BitOR($LVS_SHOWSELALWAYS, $LVS_NOSORTHEADER, $LVS_REPORT), $TAB_NR_2)
+Local $Kopfzeile_Explorerbaum = GUICtrlCreateListView("", 0, 70, 690, 25, BitOR($LVS_SHOWSELALWAYS, $LVS_NOSORTHEADER, $LVS_REPORT), $TAB_NR_2)
 _GUICtrlListView_SetExtendedListViewStyle($Kopfzeile_Explorerbaum, BitOR($LVS_EX_FULLROWSELECT, $LVS_EX_GRIDLINES, $LVS_EX_DOUBLEBUFFER))
 
 _GUICtrlListView_AddColumn($Kopfzeile_Explorerbaum, "VIVE HOME - Application Overview", 645)
@@ -666,15 +671,25 @@ GuiCtrlSetTip(-1, "Stops Oculus Rift Service on VIVEHIM StartUp." & @CRLF & @CRL
 GUICtrlSetFont(-1, 11, 400, 1, $font_arial)
 
 
-GUICtrlCreateLabel("Experimental:", 10, 420, 265, 20)
+GUICtrlCreateLabel("Experimental:", 10, 415, 265, 20)
 GUICtrlSetFont(-1, 11, 400, 1, $font_arial)
 $Status_Checkbox_FB_Check = IniRead($config_ini,"Settings", "FB_Check", "")
-$Checkbox_FB_Check = GUICtrlCreateCheckbox(" Start Fallback Check together with VIVE HOME", 11, 440, 315, 20) ; 11, 400, 315, 20)
+$Checkbox_FB_Check = GUICtrlCreateCheckbox(" Start Fallback Check together with VIVE HOME", 11, 435, 315, 20) ; 11, 400, 315, 20)
 If $Status_Checkbox_FB_Check = "True" Then GUICtrlSetState(-1, $GUI_CHECKED)
 If $Status_Checkbox_FB_Check = "True" Then GUICtrlSetState($Checkbox_ShowPlayerOnline, $GUI_UNCHECKED)
 If $Status_Checkbox_FB_Check = "True" Then IniWrite($config_ini, "Settings", "ShowPlayerOnline", "false")
 GuiCtrlSetTip(-1, "Starts Fallback Check together with VIVE HOME auf automatically loads VIVE HOME again after game was closed." & @CRLF & @CRLF)
 GUICtrlSetFont(-1, 11, 400, 1, $font_arial)
+
+$Status_Checkbox_USE_FB_GUI = IniRead($config_ini,"Settings", "USE_FB_GUI", "")
+$Checkbox_USE_FB_GUI = GUICtrlCreateCheckbox(" Use Fallback Status Window", 11, 455, 315, 20) ; 11, 400, 315, 20)
+If $Status_Checkbox_USE_FB_GUI = "True" Then GUICtrlSetState(-1, $GUI_CHECKED)
+GuiCtrlSetTip(-1, "USE FB GUI." & @CRLF & @CRLF)
+GUICtrlSetFont(-1, 11, 400, 1, $font_arial)
+
+
+$USE_FB_GUI_Image = GUICtrlCreatePic($gfx & "FB_Window_false.jpg", 450, 438, 180, 31)
+
 
 ; Button
 $Button_Delete_ApplicationList_INI = GUICtrlCreateButton("Delete", 330, 320, 55, 21)
@@ -729,12 +744,15 @@ GUICtrlSetFont(-1, 10, 400, 1, $font_arial)
 GUICtrlCreateTabItem("")
 #endregion
 
+
 #Region Funktionen Verknüpfen
 
 GUISetOnEvent($GUI_EVENT_CLOSE, "_Beenden")
 GUICtrlSetOnEvent($Button_Exit, "_Beenden")
 GUICtrlSetOnEvent($Button_INFO, "_Button_INFO")
 GUICtrlSetOnEvent($Button_Restart, "_Restart")
+
+GUICtrlSetOnEvent($Button_SaveFavorites_TAB1, "_Button_SaveFavorites_TAB1")
 
 GUICtrlSetOnEvent($Button_ADD_Icon, "_Button_ADD_Icon")
 GUICtrlSetOnEvent($Button_Save_Favorites, "_Button_Save_Favorites")
@@ -774,6 +792,7 @@ GUICtrlSetOnEvent($Checkbox_AutoDownload_Missing_Icons, "_Checkbox_AutoDownload_
 GUICtrlSetOnEvent($Checkbox_FB_Check, "_Checkbox_FB_Check")
 GUICtrlSetOnEvent($Checkbox_StopOVRS_on_StartUp, "_Checkbox_StopOVRS_on_StartUp")
 GUICtrlSetOnEvent($Checkbox_Minimize_OVRS, "_Checkbox_Minimize_OVRS")
+GUICtrlSetOnEvent($Checkbox_USE_FB_GUI, "_Checkbox_USE_FB_GUI")
 
 GUICtrlSetOnEvent($Button_Start_VIVEHOME, "_Button_Start_VIVEHOME")
 GUICtrlSetOnEvent($Button_UpdateIcons, "_Button_UpdateIcons")
@@ -810,7 +829,8 @@ _Create_ListViews_TAB_3()
 _Tab()
 GUICtrlSetData($Anzeige_Fortschrittbalken, 0)
 _GUICtrlStatusBar_SetText($Statusbar, "Program loaded and can now be used." & @TAB & @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
-GUICtrlSetState($TAB_NR_1_1,$GUI_SHOW)
+GUICtrlSetState($TAB_NR_1_1, $GUI_SHOW)
+
 
 _GUIListViewEx_MsgRegister()
 
@@ -1757,15 +1777,6 @@ Func _Tab()
 EndFunc
 
 Func _DB_Click_Listview()
-	$ListView_Selected_Row_Index = _GUICtrlListView_GetSelectedIndices($ListView)
-	$ListView_Selected_Row_Index = Int($ListView_Selected_Row_Index)
-	$ListView_Selected_Row_Nr = $ListView_Selected_Row_Index + 1
-
-    $ListView_Item_Array = _GUICtrlListView_GetItemTextArray($ListView, $ListView_Selected_Row_Index)
-
-    For $i = 1 To $ListView_Item_Array[0]
-        $ListView_Selected_Row_Value &= StringFormat("Column[%2d] %s", $i, $ListView_Item_Array[$i]) & @CRLF
-    Next
 
 	Sleep(200)
 	_Button_StartGame()
@@ -1887,8 +1898,77 @@ Func _Change_Preview_Icon_Available_Icons_ListView()
 	GUICtrlSetImage($Available_Icon_Preview_Image_2, $New_Icon_steam_app_ID_Path)
 EndFunc
 
+Func _Button_SaveFavorites_TAB1()
+	$NR_GameNames = IniRead($ApplicationList_INI, "ApplicationList", "NR_Applications", "")
+
+	_GUICtrlStatusBar_SetText($Statusbar, "Start adding Favorites..." & @TAB  & $GameName &  @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
+
+	For $LOOP_Checkbox_1 = 0 To $NR_GameNames
+		$GameName_ListView = _GUICtrlListView_GetItemText($listview, $LOOP_Checkbox_1, 1)
+		$GameAppId_ListView = _GUICtrlListView_GetItemText($listview, $LOOP_Checkbox_1, 2)
+
+		$CheckboxStatus =  _GUICtrlListView_GetItemChecked($ListView, $LOOP_Checkbox_1)
+
+		If $CheckboxStatus = "True" Then
+			$GetItem_Name = IniRead($ApplicationList_INI, "Application_" & $GameAppId_ListView, "Name", "")
+			$GetItem_AppId = IniRead($ApplicationList_INI, "Application_" & $GameAppId_ListView, "AppId", "")
+			$GetItem_IsFavorite = IniRead($ApplicationList_INI, "Application_" & $GameAppId_ListView, "IsFavorite", "")
+			$GetItem_IconPath = IniRead($ApplicationList_INI, "Application_" & $GameAppId_ListView, "IconPath", "")
+			$GetItem_NR = IniRead($ApplicationList_INI, "Application_" & $GetItem_AppId, "NR", "")
+
+			$GameName = $GetItem_Name
+			$Check_ImagePath = $GetItem_IconPath
+
+			If $GetItem_IsFavorite = "false" or $GetItem_IsFavorite = "" Then
+				_GUICtrlStatusBar_SetText($Statusbar, "Working...Adding Favorite: " & @TAB & $GameName & @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
+				GUICtrlSetImage($Icon_Preview_Image, $Check_ImagePath)
+				GUICtrlSetImage($Available_Icon_Preview_Image_1, $Check_ImagePath)
+				_Write_Favorite_2_Image()
+				_Write_Favorite_2_DB_true()
+				IniWrite($ApplicationList_INI, "Application_" & $GetItem_AppId, "IsFavorite", "true")
+				IniWrite($ApplicationList_INI, "Application_" & $GetItem_NR, "IsFavorite", "true")
+				_GUICtrlStatusBar_SetText($Statusbar, "Favorite successful added: " & @TAB  & $GameName &  @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
+			EndIf
+			$GameName = ""
+			$Check_ImagePath = ""
+		Else
+			$GetItem_Name = IniRead($ApplicationList_INI, "Application_" & $GameAppId_ListView, "Name", "")
+			$GetItem_AppId = IniRead($ApplicationList_INI, "Application_" & $GameAppId_ListView, "AppId", "")
+			$GetItem_IsFavorite = IniRead($ApplicationList_INI, "Application_" & $GameAppId_ListView, "IsFavorite", "")
+			$GetItem_IconPath = IniRead($ApplicationList_INI, "Application_" & $GameAppId_ListView, "IconPath", "")
+
+			$GameName = $GetItem_Name
+			$Check_ImagePath = $GetItem_IconPath
+
+			If $GetItem_IsFavorite = "true" Then
+				_GUICtrlStatusBar_SetText($Statusbar, "Working...Removing Favorite: " & @TAB  & $GameName &  @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
+				GUICtrlSetImage($Icon_Preview_Image, $Check_ImagePath)
+				GUICtrlSetImage($Available_Icon_Preview_Image_1, $Check_ImagePath)
+				_Write_Favorite_2_DB_false()
+				IniWrite($ApplicationList_INI, "Application_" & $GetItem_AppId, "IsFavorite", "false")
+				IniWrite($ApplicationList_INI, "Application_" & $GetItem_NR, "IsFavorite", "false")
+				FileDelete($Icons_DIR_2 & "Favorites\" & $GetItem_AppId & ".jpg")
+				_GUICtrlStatusBar_SetText($Statusbar, "Favorite successful removed: " & @TAB  & $GameName &  @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
+			EndIf
+			$GameName = ""
+			$Check_ImagePath = ""
+		EndIf
+
+		$ProcessBar_Status = $LOOP_Checkbox_1 * 100 / $NR_GameNames
+		$ProcessBar_Status = $ProcessBar_Status
+		GUICtrlSetData($Anzeige_Fortschrittbalken, $ProcessBar_Status)
+
+	Next
+	_Read_from_VIVEHOME_DB()
+	Sleep(500)
+	$Time = @HOUR & ":" & @MIN & ":" & @SEC
+	_GUICtrlStatusBar_SetText($Statusbar, "Finished adding Favorites." & @TAB & $Time &  @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
+	GUICtrlSetData($Anzeige_Fortschrittbalken, 0)
+EndFunc
+
 
 Func _Button_ADD_Icon()
+	GUICtrlSetData($Anzeige_Fortschrittbalken, 10)
 	$Check_idRadio_ImagePath = IniRead($config_ini, "Settings", "IconPath", "")
 
 	$Icon_Folder = $Icons
@@ -1903,11 +1983,10 @@ Func _Button_ADD_Icon()
 	$ListView_IconsDrop2_Selected_Row_Nr = $ListView_IconsDrop2_Selected_Row_Index
 
 	$GameName_IconsDrop2 = _GUICtrlListView_GetItemText($Available_Games_ListView, $ListView_IconsDrop2_Selected_Row_Nr, 0)
-	;_ArrayDisplay($GameName_IconsDrop2)
 
 	$Drop_IconName = $IconName
 
-	;MsgBox(0, $ListView_IconsDrop2_Selected_Row_Nr, $ListView_IconsDrop2_Selected_Row_Index & @CRLF & $ListView_IconsDrop2_Selected_Row_Nr)
+	GUICtrlSetData($Anzeige_Fortschrittbalken, 30)
 
 	If $Drop_IconName <> "" Then
 
@@ -1916,20 +1995,7 @@ Func _Button_ADD_Icon()
 		$ListView_Item_Array = 0
 		$ListView_Selected_Row_Value = ""
 
-		$ListView_Selected_Row_Index = _GUICtrlListView_GetSelectedIndices($ListView)
-		$ListView_Selected_Row_Index = Int($ListView_Selected_Row_Index)
-		$ListView_Selected_Row_Nr = $ListView_Selected_Row_Index + 1
-
-		$ListView_Item_Array = _GUICtrlListView_GetItemTextArray($ListView, $ListView_Selected_Row_Index)
-		$ListView_Item_Name_ID = $ListView_Item_Array[2] & " - " & $ListView_Item_Array[3]
-
-		For $LOOP_Check_Name_1 = 1 To $ListView_Item_Array[0]
-			$ListView_Check_Name_Array = _GUICtrlListView_GetItemTextArray($ListView, $LOOP_Check_Name_1)
-			If $GameName_IconsDrop2 = $ListView_Check_Name_Array[2] Then
-				$Drop_IconAppKey = $ListView_Check_Name_Array[3]
-				ExitLoop
-			EndIf
-		Next
+		$Drop_IconAppKey = IniRead($ApplicationList_INI, "Application_" & $ListView_IconsDrop2_Selected_Row_Nr + 1, "AppId", "")
 
 
 		$VIVE_Home_DB_Path = $VIVE_HOME_VRAPP_Folder & "vive.sqlite"
@@ -1959,8 +2025,14 @@ Func _Button_ADD_Icon()
 		_SQLite_Query($VIVE_Home_DB, "SELECT ROWID,* FROM " & $VIVE_Home_DB_TABLE_Name & " ORDER BY ROWID;", $hQuery)
 		_SQLite_FetchNames($hQuery, $aNames)
 
+	GUICtrlSetData($Anzeige_Fortschrittbalken, 60)
 
 		For $NR = 1 To $iRows - 1
+			$NR_ProcessBar = $NR + 60
+			$ProcessBar_Status = $NR * 100 / $iRows - 1
+			$ProcessBar_Status = $ProcessBar_Status
+			$ProcessBar_Status_new = 40 * $ProcessBar_Status / 100
+			GUICtrlSetData($Anzeige_Fortschrittbalken, $NR_ProcessBar + $ProcessBar_Status_new)
 			_SQLite_GetTable2d(-1, "SELECT * FROM " & $VIVE_Home_DB_TABLE_Name & ";", $aRow, $iRows, $iCols)
 			If $iRows <> "" Then $iRows = $iRows + 1
 			If $iRows = "" Then $iRows = 1
@@ -1972,6 +2044,9 @@ Func _Button_ADD_Icon()
 				$Drop_Icon_Path = $Icon_Folder & $Drop_IconName
 				$New_Icon_URL = $aRow[7]
 				$New_Icon_Path = $Drop_Icon_Path
+				$NR_TEMP = IniRead($ApplicationList_INI, "Application_" & $Drop_IconAppKey, "NR", "")
+				IniWrite($ApplicationList_INI, "Application_" & $Drop_IconAppKey, "IconPath", $New_Icon_Path)
+				IniWrite($ApplicationList_INI, "Application_" & $NR_TEMP, "IconPath", $New_Icon_Path)
 
 				_SQLite_Exec($VIVE_Home_DB, "REPLACE INTO " & $VIVE_Home_DB_TABLE_Name & "(rowid,app_key,launch_count,last_launched,total_played,is_favorite,installed_time,img_url,img_timestamp,img_file_path,img_fetch_time) VALUES ('" & _
 												$aRow[0] & "','" & $aRow[1] & "','" & $aRow[2] & "','" & $aRow[3] & "','" & $aRow[4] & "','" & $aRow[5] & "','" & $aRow[6] & "','" & $New_Icon_URL & "','" & $aRow[8] & "','" & $New_Icon_Path & "','" & $aRow[10] & "');")
@@ -1981,6 +2056,8 @@ Func _Button_ADD_Icon()
 												$aRow[0] & "','" & $aRow[1] & "','" & $aRow[2] & "','" & $aRow[3] & "','" & $aRow[4] & "','" & $aRow[5] & "','" & $aRow[6] & "','" & $aRow[7] & "','" & $aRow[8] & "','" & $aRow[9] & "','" & $aRow[10] & "');")
 			EndIf
 		Next
+
+	GUICtrlSetData($Anzeige_Fortschrittbalken, 100)
 
 		_SQLite_QueryFinalize($hQuery)
 		_SQLite_Close($VIVE_HOME_VRAPP_Folder & "vive.sqlite")
@@ -2008,6 +2085,9 @@ Func _Button_ADD_Icon()
 
 	EndIf
 
+	GUICtrlSetData($Anzeige_Fortschrittbalken, 0)
+	$Time = @HOUR & ":" & @MIN & ":" & @SEC
+	_GUICtrlStatusBar_SetText($Statusbar, "New Icon added: " & @TAB  & $Drop_IconName & " - " & $Time &  @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
 EndFunc
 
 Func _Button_Save_Favorites()
@@ -2102,22 +2182,23 @@ Func _Button_Start_VIVEHOME()
 		Do
 			$NR_TEMP = $NR_TEMP + 1
 			Sleep(1000)
-			If $NR_TEMP = 30 Then
+			If $NR_TEMP = 45 Then
 				MsgBox(0, "Error", "Was not able to start SteamVR")
 				Exit
 			EndIf
-		Until WinExists("SteamVR-Status")
+		;Until WinExists("SteamVR-Status")
+		Until ProcessExists("vrmonitor.exe")
 	EndIf
 
-	Sleep(500)
+	Sleep(200)
 
 	If FileExists($System_DIR & "1_ViveHome.exe") Then
-		ShellExecute($System_DIR & "1_ViveHome.exe", "", $System_DIR)
+		ShellExecuteWait($System_DIR & "1_ViveHome.exe", "", $System_DIR)
 	Else
-		ShellExecute($System_DIR & "1_ViveHome.au3", "", $System_DIR)
+		ShellExecuteWait($System_DIR & "1_ViveHome.au3", "", $System_DIR)
 	EndIf
 
-	Sleep(500)
+	Sleep(2000)
 
 	If $Check_Checkbox_FB_Check = "true" Then
 		If FileExists($System_DIR & "FBCheck.exe") Then
@@ -2546,7 +2627,6 @@ Func _Checkbox_Minimize_OVRS()
 	EndIf
 EndFunc
 
-
 Func _Checkbox_FB_Check()
 	$Status_Checkbox = GUICtrlRead($Checkbox_FB_Check)
 
@@ -2561,6 +2641,19 @@ Func _Checkbox_FB_Check()
 	EndIf
 EndFunc
 
+Func _Checkbox_USE_FB_GUI()
+	$Status_Checkbox = GUICtrlRead($Checkbox_USE_FB_GUI)
+
+	If $Status_Checkbox = 1 Then
+		IniWrite($config_ini, "Settings", "USE_FB_GUI", "true")
+		GUICtrlSetImage($USE_FB_GUI_Image, $gfx & "FB_Window.jpg")
+	EndIf
+
+	If $Status_Checkbox = 4 Then
+		IniWrite($config_ini, "Settings", "USE_FB_GUI", "false")
+		GUICtrlSetImage($USE_FB_GUI_Image, $gfx & "FB_Window_false.jpg")
+	EndIf
+EndFunc
 
 
 Func _idRadio_ImagePath_1()
@@ -2703,7 +2796,6 @@ Func _Read_from_VIVEHOME_DB()
 		$Anzeige_Spalte = $aRow[1]
 		_GUICtrlListView_AddSubItem($ListView, $Ebene_temp, $Anzeige_Spalte, 2)
 
-
 		$Anzeige_Spalte = IniRead($ApplicationList_INI, "Application_" & $aRow[1], "right_now", "")
 		_GUICtrlListView_AddSubItem($ListView, $Ebene_temp, $Anzeige_Spalte, 3)
 
@@ -2735,6 +2827,7 @@ Func _Read_from_VIVEHOME_DB()
 		If $Anzeige_Spalte = "1" Then
 			IniWrite($ApplicationList_INI, "Application_" & $aRow[1], "IsFavorite", "true")
 			_GUICtrlListView_SetItemImage($listview, $Ebene_temp, 1)
+			_GUICtrlListView_SetItemChecked($listview, $Ebene_temp)
 		Else
 			_GUICtrlListView_SetItemImage($listview, $Ebene_temp, 0)
 		EndIf
@@ -2899,7 +2992,6 @@ Func _ApplicationList_Update()
 	EndIf
 EndFunc
 
-
 Func _Create_TreeView()
 	$NR_Applications = IniRead($ApplicationList_INI, "ApplicationList", "NR_Applications", "")
 	If $NR_Applications = "" Then $NR_Applications = 1
@@ -2984,7 +3076,6 @@ EndFunc
 Func _Button_Exit_HTML_GUI()
 	GUIDelete($HTML_GUI)
 EndFunc
-
 
 Func _Create_ListViews_TAB_3()
 	; Create arrays and fill ListViews
@@ -3079,7 +3170,6 @@ $iLV_Available_Groups_ListView = _GUIListViewEx_Init($Available_Groups_ListView,
 $iLV_IconsDrop2_ListView = _GUIListViewEx_Init($IconsDrop2_ListView, $Content_IconsDrop2_ListView, 0, 0, True)
 
 EndFunc
-
 
 Func _Get_ADD_PlayersOnline_DATA()
 	Global $Check_AppId = $Write_AppId
