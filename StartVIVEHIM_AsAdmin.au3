@@ -1,10 +1,13 @@
-
 #RequireAdmin
+#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
+#AutoIt3Wrapper_Icon=GUI_ICONS\InfoWindow.ico
+#EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
+
 
 $config_ini = @ScriptDir & "\System\" & "config.ini"
-
 $Install_DIR = @ScriptDir & "\"
 IniWrite($config_ini, "Folders", "Install_Folder", $Install_DIR)
+IniWrite($Config_INI, "TEMP", "StartedAsAdmin", "true")
 
 Global $VIVE_HOME_VRAPP_Folder = IniRead($Config_INI, "Folders", "VIVE_HOME_VRAPP", "")
 

@@ -147,7 +147,7 @@ Global $OVR_Service_Check, $OVR_Service_Check_pic, $Button_OVR_Service_Start, $B
 Global $Status_Checkbox_Minimize_OVRS, $Checkbox_Minimize_OVRS, $NR_TEMP, $Check_SteamName, $NR_ProcessBar, $ProcessBar_Status_new
 Global $ListView_DB_Selected_Row_Index, $ListView_DB_Selected_Row_Nr, $GameName_DB_Click, $GameAppId_DB_Click
 Global $Check_AppId, $sHTML, $sStringReplace, $Check_Steam_AppId, $Button_SaveFavorites_TAB1, $GameName_ListView, $GameAppId_ListView
-Global $Status_Checkbox_USE_FB_GUI, $Checkbox_USE_FB_GUI, $USE_FB_GUI_Image
+Global $Status_Checkbox_USE_FB_GUI, $Checkbox_USE_FB_GUI, $USE_FB_GUI_Image, $StartedAsAdmin
 
 Local $hQuery, $aRow, $iRows, $iCols, $aNames
 #endregion
@@ -183,6 +183,8 @@ If $Check_idRadio_ImagePath = "1" Then $Icons = $Icons_DIR_1
 If $Check_idRadio_ImagePath = "2" Then $Icons = $Icons_DIR_2
 If $Check_idRadio_ImagePath = "3" Then $Icons = $Icons_DIR_3
 If $Check_idRadio_ImagePath = "4" Then $Icons = $Icons_DIR_4
+
+$StartedAsAdmin = IniRead($Config_INI, "TEMP", "StartedAsAdmin", "")
 #endregion
 
 #region Erster Start Abfrage
@@ -386,7 +388,9 @@ Global $Button_Exit = GUICtrlCreateButton("Exit", 602, 480, 35, 35, $BS_BITMAP)
 _GUICtrlButton_SetImage($Button_Exit, $gfx & "Exit.bmp")
 GuiCtrlSetTip(-1, "Closes VIVEHIM.")
 
-_GUICtrlStatusBar_SetText($Statusbar, "LOADING, please wait..." & @TAB & @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
+If $StartedAsAdmin <> "true" Then _GUICtrlStatusBar_SetText($Statusbar, "LOADING, please wait..." & @TAB & @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
+If $StartedAsAdmin = "true" Then _GUICtrlStatusBar_SetText($Statusbar, "LOADING, please wait..." & @TAB & "[ADMIN]" & @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
+
 
 ; TABS ERSTELLEN
 $TAB_NR = GUICtrlCreateTab(2, 50, 1095, 575, BitOR($TCS_BUTTONS, $TCS_FLATBUTTONS))
@@ -828,7 +832,8 @@ _Read_Steam_Shortcuts()
 _Create_ListViews_TAB_3()
 _Tab()
 GUICtrlSetData($Anzeige_Fortschrittbalken, 0)
-_GUICtrlStatusBar_SetText($Statusbar, "Program loaded and can now be used." & @TAB & @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
+If $StartedAsAdmin <> "true" Then _GUICtrlStatusBar_SetText($Statusbar, "Program loaded and can now be used." & @TAB & @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
+If $StartedAsAdmin = "true" Then _GUICtrlStatusBar_SetText($Statusbar, "Program loaded and can now be used." & @TAB & "[ADMIN]" & @TAB & "'VIVE HOME Icon Manager - Version " & $Version & "'")
 GUICtrlSetState($TAB_NR_1_1, $GUI_SHOW)
 
 
@@ -2186,7 +2191,6 @@ Func _Button_Start_VIVEHOME()
 				MsgBox(0, "Error", "Was not able to start SteamVR")
 				Exit
 			EndIf
-		;Until WinExists("SteamVR-Status")
 		Until ProcessExists("vrmonitor.exe")
 	EndIf
 
@@ -3395,20 +3399,31 @@ Func _Button_INFO()
 EndFunc
 
 Func _Restart()
+	$StartedAsAdmin = IniRead($Config_INI, "TEMP", "StartedAsAdmin", "")
+
 	FileDelete($Shortcuts_INI)
 	FileDelete(@ScriptDir & "\" & "PlayersOnline.jpg")
-	If FileExists($Install_DIR & "StartVIVEHIM.exe") Then
-		ShellExecute($Install_DIR & "StartVIVEHIM.exe")
-	Else
-		ShellExecute($Install_DIR & "StartVIVEHIM.au3")
-	EndIf
 
+	If $StartedAsAdmin = "true" Then
+		If FileExists($Install_DIR & "StartVIVEHIM_AsAdmin.exe") Then
+			ShellExecute($Install_DIR & "StartVIVEHIM_AsAdmin.exe")
+		Else
+			ShellExecute($Install_DIR & "StartVIVEHIM_AsAdmin.au3")
+		EndIf
+	Else
+		If FileExists($Install_DIR & "StartVIVEHIM.exe") Then
+			ShellExecute($Install_DIR & "StartVIVEHIM.exe")
+		Else
+			ShellExecute($Install_DIR & "StartVIVEHIM.au3")
+		EndIf
+	EndIf
 	Exit
 EndFunc
 
 Func _Beenden()
 	FileDelete($Shortcuts_INI)
 	FileDelete(@ScriptDir & "\" & "PlayersOnline.jpg")
+	IniWrite($config_ini, "TEMP", "StartedAsAdmin", "")
 	IniWrite($config_ini, "TEMP", "TEMP_1", "")
 	IniWrite($config_ini, "TEMP", "TEMP_2", "")
 	IniWrite($config_ini, "TEMP", "TEMP_3", "")

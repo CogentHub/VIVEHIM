@@ -25,6 +25,7 @@ If $Check_IconPath = "4" Then $Icons = $Icons_DIR_4
 Global $Check_Load_ShowPlayerOnline_on_StartUp = IniRead($config_ini,"Settings", "Load_ShowPlayerOnline_on_StartUp", "")
 Global $Check_Checkbox_FB_Check = IniRead($config_ini,"Settings", "FB_Check", "")
 Global $Check_Use_VIVEHOME_lnk = IniRead($config_ini,"TEMP", "Use_VIVEHOME_lnk", "")
+Global $Check_ShowPlayerOnline = IniRead($config_ini,"Settings", "ShowPlayerOnline", "")
 
 Global $NR_Applications = IniRead($ApplicationList_INI, "ApplicationList", "NR_Applications", "")
 
@@ -33,19 +34,19 @@ Global $Check_Filename_3, $Check_Filename, $hBMPBuff, $hGraphic, $hPen, $GUI_RUN
 
 Global $Value_Sleep_1 = IniRead($config_ini, "Settings", "Value_ShowPlayerOnline", "")
 
-Do
-	;$Check_Load_ShowPlayerOnline_on_StartUp = IniRead($config_ini, "Settings", "Load_ShowPlayerOnline_on_StartUp", "")
-	;$Check_Checkbox_FB_Check = IniRead($config_ini, "Settings", "FB_Check", "")
-	;$Check_Use_VIVEHOME_lnk = IniRead($config_ini, "TEMP", "Use_VIVEHOME_lnk", "")
+$SteamVR_Status = "false"
 
+Do
 	_Get_ADD_DATA()
 
-	$Value_Sleep_1 = IniRead($config_ini, "Settings", "Value_ShowPlayerOnline", "")
-	$Value_Sleep_1 = Int($Value_Sleep_1) * 60000
+	If $Check_ShowPlayerOnline = "true" Then
+		$Value_Sleep_1 = IniRead($config_ini, "Settings", "Value_ShowPlayerOnline", "")
+		$Value_Sleep_1 = Int($Value_Sleep_1) * 60000
 
-	Sleep($Value_Sleep_1)
+		Sleep($Value_Sleep_1)
+	EndIf
 
-	If WinExists("SteamVR-Status") Then
+	If ProcessExists("vrmonitor.exe") Then
 		$SteamVR_Status = "true"
 	Else
 		$SteamVR_Status = "false"
@@ -54,6 +55,8 @@ Do
 	If $Check_Load_ShowPlayerOnline_on_StartUp = "true" Then Exit
 	If $Check_Checkbox_FB_Check = "true" Then Exit
 	If $Check_Use_VIVEHOME_lnk = "true" Then Exit
+
+	If $Check_ShowPlayerOnline = "false" Then Exit
 
 Until $SteamVR_Status = "false"
 
