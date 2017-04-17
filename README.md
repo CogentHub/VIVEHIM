@@ -53,6 +53,8 @@ VIVE HOME Icon Manager
 3. Start VIVEHIM using the File 'StartVIVEHIM.exe' in choosen VIVEHIM folder
 3. If VIVEHIM was fresh installed or used for the first time then it will take some time for loading on first start
 
+![Read VIVEHIM StartUp Guide](VIVEHIM_StartUp_Guide.pdf)
+
 *If you did not use the default install folders for VIVEHOME and VIVEHIM does not found the needed folder then a pop up Window will appear asking for the needed install folders.
 
 ![logo](VIVEHIM.png)
