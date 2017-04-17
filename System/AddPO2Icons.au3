@@ -1,6 +1,4 @@
-#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Icon=..\GUI_ICONS\AutoDataUpdate.ico
-#EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
+
 #include <Inet.au3>
 #include "_GDIPlus_WTOB.au3"
 #include <GDIPlus.au3>
@@ -33,6 +31,7 @@ Global $SteamVR_Status, $hImage1, $hImage2, $hImage1_Path, $hImage2_Path, $Check
 Global $Check_Filename_3, $Check_Filename, $hBMPBuff, $hGraphic, $hPen, $GUI_RUNDEFMSG
 
 Global $Value_Sleep_1 = IniRead($config_ini, "Settings", "Value_ShowPlayerOnline", "")
+Global $Status_IDRadio = IniRead($config_ini,"Settings", "IDRadio", "")
 
 $SteamVR_Status = "false"
 
@@ -46,11 +45,16 @@ Do
 		Sleep($Value_Sleep_1)
 	EndIf
 
-	If ProcessExists("vrmonitor.exe") Then
+	If ProcessExists("vrmonitor.exe") or WinExists("SteamVR-Status") or WinExists("SteamVR Status") Then
 		$SteamVR_Status = "true"
 	Else
 		$SteamVR_Status = "false"
 	EndIf
+
+	$Status_IDRadio = IniRead($config_ini,"Settings", "IDRadio", "")
+
+	If $Status_IDRadio = "1" Then Exit
+	If $Status_IDRadio = "4" Then Exit
 
 	If $Check_Load_ShowPlayerOnline_on_StartUp = "true" Then Exit
 	If $Check_Checkbox_FB_Check = "true" Then Exit

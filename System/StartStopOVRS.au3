@@ -1,8 +1,5 @@
-#RequireAdmin
-#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Icon=..\GUI_ICONS\PC_Server_beenden.ico
-#EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
+#RequireAdmin
 
 Global $OVR_Status_Check
 Global $Config_INI = @ScriptDir & "\config.ini"

@@ -1,6 +1,4 @@
-#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Icon=..\GUI_ICONS\PC_Server_starten.ico
-#EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
+
 #include <MsgBoxConstants.au3>
 #include <GUIConstantsEx.au3>
 #include <WindowsConstants.au3>
@@ -45,13 +43,16 @@ Local Const $PG_WS_DLGFRAME = 0x00400000
 $font_arial = "arial"
 
 If $USE_FB_GUI = "true" Then
-	$GUI = GUICreate("Download and Fix Missing Icons", 230, 35, $X, $Y, BitOR($PG_WS_DLGFRAME, $PG_WS_POPUP))  ; $WS_EX_TOPMOST
+	$GUI = GUICreate("FBCheck", 230, 35, $X, $Y, BitOR($PG_WS_DLGFRAME, $PG_WS_POPUP))  ; $WS_EX_TOPMOST
 	GUISetIcon(@AutoItExe, -2, $GUI)
 	GUISetBkColor($Yellow)
 
-	$GUI_Label = GUICtrlCreateLabel("...Loading...", 50, 7, 127, 20)
-	GUICtrlSetFont(-1, 12, 600, 2, $font_arial, 2)
+	$GUI_Label = GUICtrlCreateLabel("...Loading...", 50, 19, 127, 20)
+	GUICtrlSetFont(-1, 11, 600, 2, $font_arial, 2)
 	GUISetBkColor($Yellow)
+
+	Global $Button_Close_Current_Running = GUICtrlCreateButton("Close current running APP", 35, 0, 160, 20, $BS_BITMAP)
+	GUICtrlSetOnEvent($Button_Close_Current_Running, "_Close_CurrentRunning")
 
 	Global $Button_Restart = GUICtrlCreateButton("Restart", 0, 0, 35, 35, $BS_BITMAP)
 	_GUICtrlButton_SetImage($Button_Restart, $gfx & "Restart.bmp")
@@ -59,7 +60,7 @@ If $USE_FB_GUI = "true" Then
 
 	Global $Button_Exit = GUICtrlCreateButton("Exit", 195, 0, 35, 35, $BS_BITMAP)
 	_GUICtrlButton_SetImage($Button_Exit, $gfx & "Exit.bmp")
-	GUICtrlSetOnEvent($Button_Exit, "_Close_CurrentRunning")
+	GUICtrlSetOnEvent($Button_Exit, "_Exit")
 
 	GUISetState(@SW_SHOW, $GUI)
 	WinActivate("Vive Home")
@@ -78,7 +79,7 @@ Do
 		If WinExists("Oculus") Then WinSetState("Oculus", "", @SW_MINIMIZE)
 	EndIf
 
-	If WinExists("SteamVR-Status") Then
+	If ProcessExists("vrmonitor.exe") or WinExists("SteamVR-Status") or WinExists("SteamVR Status") Then
 		;_Check_Open_Windows_1()
 		$VIVEHOMECheck = "false"
 		For $LOOP_VIVEHOMECheck = 0 To $NR_Handle_1
@@ -92,6 +93,7 @@ Do
 				GUICtrlSetData($GUI_Label, "Vive Home")
 				GUISetBkColor($Blue)
 			EndIf
+			If $USE_FB_GUI = "true" Then WinSetOnTop("FBCheck", "", $WINDOWS_ONTOP)
 			Do
 				$GameStarted = ""
 				;_Check_Open_Windows_1()
@@ -100,6 +102,7 @@ Do
 					If WinExists("Oculus") Then WinSetState("Oculus", "", @SW_MINIMIZE)
 				EndIf
 			Until Not WinExists("Vive Home")
+			If $USE_FB_GUI = "true" Then WinSetState("FBCheck", "", @SW_DISABLE)
 			Sleep(3000)
 		Else
 			Sleep(5000)
@@ -119,7 +122,8 @@ Do
 			Next
 		EndIf
 
-		If $GameStarted <> "" and $GameStarted <> "Oculus" and $GameStarted <> "Vive Home" and $GameStarted <> "SteamVR-Status" and $GameStarted <> "SteamVR Status" and $GameStarted <> "SteamVR-Running..." and $OldWindowExists <> "true" and $GameStarted <> "Download and Fix Missing Icons" Then
+		If $GameStarted <> "" and $GameStarted <> "Oculus" and $GameStarted <> "Vive Home" and $GameStarted <> "SteamVR-Status" and $GameStarted <> "SteamVR Status" and $GameStarted <> "SteamVR-Running..." and $OldWindowExists <> "true" and $GameStarted <> "FBCheck" Then
+			If $USE_FB_GUI = "true" Then WinSetOnTop("FBCheck", "", $WINDOWS_ONTOP)
 			Do
 				If $USE_FB_GUI = "true" Then
 					GUICtrlSetData($GUI_Label, $GameStarted)
@@ -129,8 +133,9 @@ Do
 					If WinExists("Oculus") Then WinSetState("Oculus", "", @SW_MINIMIZE)
 				EndIf
 				Sleep(5000)
-				If Not WinExists("SteamVR-Status") Then Exit
+				If Not ProcessExists("vrmonitor.exe") Then Exit
 			Until Not WinExists($GameStarted)
+			If $USE_FB_GUI = "true" Then WinSetState("FBCheck", "", @SW_DISABLE)
 
 			If Not WinExists($GameStarted) Then
 				If FileExists($System_DIR & "1_ViveHome.exe") Then
@@ -151,15 +156,6 @@ Do
 	Else
 		$SteamVR_Status = "false"
 	EndIf
-
-	;$Title_1 = ""
-	;$Handle_1 = ""
-	;$Title_2 = ""
-	;$Handle_2 = ""
-	;$NR_Handle_1 = 0
-	;$NR_Handle_2 = 0
-	;$Title_Array_1 = 0
-	;$Title_Array_2 = 0
 
 	If $USE_FB_GUI = "true" Then
 		GUICtrlSetData($GUI_Label, $GameStarted & "...Loading...")
@@ -234,6 +230,10 @@ Func _Close_CurrentRunning()
 	WinClose($GameStarted)
 	_Restart_FBCheck()
 	If WinExists("Vive Home") Then WinActivate("Vive Home")
+	Exit
+EndFunc
+
+Func _Exit()
 	Exit
 EndFunc
 

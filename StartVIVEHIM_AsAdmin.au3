@@ -1,8 +1,5 @@
-#RequireAdmin
-#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Icon=GUI_ICONS\InfoWindow.ico
-#EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
+#RequireAdmin
 
 $config_ini = @ScriptDir & "\System\" & "config.ini"
 $Install_DIR = @ScriptDir & "\"
@@ -36,6 +33,5 @@ Func _Button_VIVE_HOME_VRAPP_delete()
 	IniWrite($config_ini, "TEMP", "TEMP_2", "")
 	IniWrite($config_ini, "TEMP", "TEMP_3", "")
 EndFunc
-
 
 Exit

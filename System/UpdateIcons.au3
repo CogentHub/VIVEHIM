@@ -1,8 +1,4 @@
-#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Icon=..\GUI_ICONS\DataUpdate.ico
-#EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
-;#include<IE.au3>
 #include <File.au3>
 #include <Array.au3>
 #include <string.au3>
