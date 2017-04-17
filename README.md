@@ -7,19 +7,20 @@ VIVE HOME Icon Manager
 # Features:
 
 1. Start VIVE HOME with Fallback function and change/add Icons 
-2. Add Players Online Count to Icons [Favorites]
-3. Start/Stop Oculus Rift Service
-4. Download and add missing SteamVR game icons to VIVE HOME database
-5. Change the path for the icons, there are four to choose from, two of them can be user defined
-6. Add icons to selected games (for example, non Steam games)
-7. Add groups that can be used in VIVE HOME to organize the shortcuts
-8. Selection and creation of favorites (with online player count)
-9. Add number of players (online Player count) to the icons (Favorites) see pictures
-10. Start VIVE HOME directly from VIVEHIM (player number count on icons can be updated automatically if selected in settings)
-11. Steam Games Info GUI if selecting Sub Item of a game in Games Overview TAB
-12. Automatic download of missing Icons on Start Up. (Only if File does not exist. For the originals/new ones use Download Icons Button)
-13. Start Games by double click in "VIVE HOME Database" TAB or using the Button
-14. Fallback to VIVE HOME after game was closed
+2. Show GUI Window for Fallback function
+3. Add Players Online Count to Icons [Favorites]
+4. Start/Stop Oculus Rift Service
+5. Download and add missing SteamVR game icons to VIVE HOME database
+6. Change the path for the icons, there are four to choose from, two of them can be user defined
+7. Add icons to selected games (for example, non Steam games)
+8. Add groups that can be used in VIVE HOME to organize the shortcuts
+9. Selection and creation of favorites (with online player count)
+10. Add number of players (online Player count) to the icons (Favorites) see pictures
+11. Start VIVE HOME directly from VIVEHIM (player number count on icons can be updated automatically if selected in settings)
+12. Steam Games Info GUI if selecting Sub Item of a game in Games Overview TAB
+13. Automatic download of missing Icons on Start Up. (Only if File does not exist. For the originals/new ones use Download Icons Button)
+14. Start Games by double click in "VIVE HOME Database" TAB or using the Button
+15. Fallback to VIVE HOME after game was closed
 
 
 # Pictures:
