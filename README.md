@@ -41,7 +41,9 @@ VIVE HOME Icon Manager
 
 
 # Download:
-[Download compiled](http://evo-x.de/wbb3/board453-community-magazin/board595-virtual-reality-vr/220052-vivehim-vive-home-icon-manager-download-and-fixes-missing-icons-in-vive-home/)
+[Download latest Version](https://github.com/CogentHub/VIVEHIM/releases/tag/v0.72)
+
+[Download compiled (Mirror)](http://evo-x.de/wbb3/board453-community-magazin/board595-virtual-reality-vr/220052-vivehim-vive-home-icon-manager-download-and-fixes-missing-icons-in-vive-home/)
 
 ![StartUp Guide](VIVEHIM_StartUp_Guide.pdf)
 
