@@ -1,4 +1,5 @@
 
+;#include<IE.au3>
 #include <File.au3>
 #include <Array.au3>
 #include <string.au3>

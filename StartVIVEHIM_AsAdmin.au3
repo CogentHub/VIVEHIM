@@ -34,4 +34,5 @@ Func _Button_VIVE_HOME_VRAPP_delete()
 	IniWrite($config_ini, "TEMP", "TEMP_3", "")
 EndFunc
 
+
 Exit
